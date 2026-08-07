@@ -1,0 +1,19 @@
+{
+  "name": "@newton/auth",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@newton/config": "*",
+    "@newton/database": "*",
+    "@newton/types": "*",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.0",
+    "zod": "^3.23.0"
+  }
+}

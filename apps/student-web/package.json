@@ -1,0 +1,41 @@
+{
+  "name": "student-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@newton/ai": "*",
+    "@newton/analytics": "*",
+    "@newton/assessment": "*",
+    "@newton/auth": "*",
+    "@newton/config": "*",
+    "@newton/curriculum": "*",
+    "@newton/database": "*",
+    "@newton/logger": "*",
+    "@newton/media": "*",
+    "@newton/notifications": "*",
+    "@newton/simulations": "*",
+    "@newton/types": "*",
+    "@newton/ui": "*",
+    "@newton/utils": "*",
+    "framer-motion": "^11.0.0",
+    "katex": "^0.16.0",
+    "lucide-react": "^0.469.0",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hook-form": "^7.51.0",
+    "zod": "^3.23.0",
+    "zustand": "^4.5.0"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0"
+  }
+}

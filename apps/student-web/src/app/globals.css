@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --color-bg:           #03045E;
+    --color-navy:         #033E8A;
+    --color-blue-mid:     #0078B7;
+    --color-blue-bright:  #0096C8;
+    --color-cyan:         #00B4D7;
+    --color-cyan-light:   #48CAE4;
+    --color-cyan-lighter: #91E0EF;
+    --color-cyan-pale:    #AEE8F4;
+    --color-cyan-ghost:   #CAF1F8;
+    --color-orange:       #FF7A1A;
+    --color-green:        #00D98B;
+  }
+
+  *, *::before, *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-cyan-pale);
+    margin: 0;
+    padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom thin scrollbar */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-blue-mid);
+    border-radius: 2px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: var(--color-cyan); }
+}
+
+@layer utilities {
+  /* Progress bar fill animation */
+  .progress-fill {
+    transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Glass card effect */
+  .glass-card {
+    background: rgba(3, 62, 138, 0.6);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(202, 241, 248, 0.08);
+  }
+
+  /* Horizontal scroll snap */
+  .scroll-snap-x {
+    scroll-snap-type: x mandatory;
+  }
+  .scroll-snap-x > * {
+    scroll-snap-align: start;
+  }
+
+  /* Outlined, transparent input used on the auth (login/signup) background */
+  .auth-field {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1.5px solid rgba(255, 255, 255, 0.55);
+    color: #ffffff;
+  }
+  .auth-field::placeholder {
+    color: rgba(255, 255, 255, 0.55);
+  }
+  .auth-field:focus {
+    outline: none;
+    border-color: var(--color-cyan-light);
+    background: rgba(255, 255, 255, 0.1);
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "checkJs": false,
+    "paths": {
+      "@newton/ui/*": ["../../packages/ui/src/*"],
+      "@newton/ai": ["../../packages/ai/src/index.js"],
+      "@newton/database/*": ["../../packages/database/src/*"],
+      "@newton/simulations": ["../../packages/simulations/src/registry.js"],
+      "@newton/curriculum/*": ["../../packages/curriculum/src/*"],
+      "@newton/assessment/*": ["../../packages/assessment/src/*"],
+      "@newton/analytics/*": ["../../packages/analytics/src/*"],
+      "@newton/knowledge-graph/*": ["../../packages/knowledge-graph/src/*"],
+      "@newton/auth/*": ["../../packages/auth/src/*"],
+      "@newton/notifications/*": ["../../packages/notifications/src/*"],
+      "@newton/media/*": ["../../packages/media/src/*"],
+      "@newton/config/*": ["../../packages/config/src/*"],
+      "@newton/types/*": ["../../packages/types/src/*"],
+      "@newton/utils/*": ["../../packages/utils/src/*"],
+      "@newton/logger/*": ["../../packages/logger/src/*"]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "@newton/types",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src",
+    "test": "jest"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  }
+}
