@@ -17,7 +17,14 @@ export default function DashboardShell({ children }) {
       <Sidebar />
 
       {/* ── Main area ──────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col min-h-screen md:ml-60">
+      {/*
+       * min-w-0 is load-bearing: a flex item defaults to min-width:auto, so
+       * this column would refuse to shrink below its widest min-content
+       * (e.g. StreakCard's whitespace-nowrap goal label), pushing the whole
+       * page past the viewport on mobile. min-w-0 lets it shrink to the
+       * screen so inner truncate/overflow-x-auto rules can do their job.
+       */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen md:ml-60">
         {/*
          * Desktop-only top header bar.
          * Mobile header lives inside each page (so it can show
