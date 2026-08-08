@@ -15,7 +15,7 @@ export default function AddFlashcardModal({ onClose, onSave, saving }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 bg-newton-bg/60 backdrop-blur-sm flex items-end md:items-center justify-center p-4"
+      className="fixed inset-0 z-50 bg-newton-bg/60 backdrop-blur-sm flex items-center justify-center p-4"
       onClick={onClose}
     >
       <div

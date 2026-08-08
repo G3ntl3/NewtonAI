@@ -1,5 +1,15 @@
 import { simulationBank } from '@newton/simulations/src/simulationBank.js';
 
+// simulationBank.js entries carry AI-facing metadata only (title/concepts/
+// fits/doesNotFit/paramHints — see that file's own docstring), never a UI
+// subject — so the Lab screen's subject tabs need their own mapping here.
+const LIVE_SUBJECTS = {
+  'projectile-motion': 'physics',
+  'graph-explorer': 'maths',
+  'quadratic-explorer': 'maths',
+  'ohms-law': 'physics',
+};
+
 // Estimated duration for each real, tappable sim — short sandbox
 // explorations. Keyed by simulationId; falls back to a sensible default.
 const LIVE_DURATIONS = {
@@ -85,7 +95,7 @@ export function getLabCatalog() {
   const live = Object.entries(simulationBank).map(([simulationId, meta]) => ({
     simulationId,
     title: meta.title,
-    subject: meta.subject,
+    subject: LIVE_SUBJECTS[simulationId] ?? null,
     estimatedTime: LIVE_DURATIONS[simulationId] ?? DEFAULT_LIVE_DURATION,
     subtitle: LIVE_SUBTITLES[simulationId] ?? '',
     formula: LIVE_FORMULAS[simulationId] ?? null,

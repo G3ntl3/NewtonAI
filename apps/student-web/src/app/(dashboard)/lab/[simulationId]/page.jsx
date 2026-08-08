@@ -26,7 +26,7 @@ export default function Page() {
 
   if (!experiment) {
     return (
-      <div className="px-4 md:px-8 py-6">
+      <div className="px-4 md:px-8 py-6 bg-white min-h-full">
         <p className="text-newton-bg/50 text-sm">This experiment isn't available.</p>
         <button
           type="button"
@@ -40,7 +40,7 @@ export default function Page() {
   }
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in bg-white min-h-full">
       <div className="bg-newton-bg px-4 md:px-8 pt-4 md:pt-6 pb-4 flex items-center gap-3 rounded-b-3xl">
         <button
           type="button"

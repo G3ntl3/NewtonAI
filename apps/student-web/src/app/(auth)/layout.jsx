@@ -6,7 +6,9 @@ import { colors } from '@/components/auth/theme';
  */
 export default function AuthLayout({ children }) {
   return (
+    <div className="md:flex md:justify-center md:bg-white">
     <div
+      className="md:max-w-[480px] md:w-full"
       style={{
         minHeight: '100vh',
         position: 'relative',
@@ -21,8 +23,8 @@ export default function AuthLayout({ children }) {
         src="/images/vector.png"
         alt=""
         aria-hidden="true"
+        className="fixed md:absolute"
         style={{
-          position: 'fixed',
           zIndex: 0,
           top: 90,
           left: '50%',
@@ -51,6 +53,7 @@ export default function AuthLayout({ children }) {
           {children}
         </div>
       </div>
+    </div>
     </div>
   );
 }

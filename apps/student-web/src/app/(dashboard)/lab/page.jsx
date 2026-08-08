@@ -31,7 +31,7 @@ export default function Page() {
   });
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in bg-white min-h-full">
       <div className="bg-newton-bg px-4 md:px-8 pt-4 md:pt-6 pb-4 rounded-b-3xl">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 min-w-0">
