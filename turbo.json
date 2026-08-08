@@ -3,7 +3,22 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**"],
+      "env": [
+        "NEWTON_MONGODB_URI",
+        "NEWTON_JWT_SECRET",
+        "NEWTON_JWT_REFRESH_SECRET",
+        "NEWTON_JWT_ACCESS_EXPIRES",
+        "NEWTON_JWT_REFRESH_EXPIRES",
+        "NEWTON_SUPPORT_PHONE",
+        "NEXT_PUBLIC_NEWTON_SUPPORT_PHONE",
+        "NEWTON_GEMINI_API_KEY",
+        "NEWTON_GEMINI_MODEL",
+        "NEWTON_CLOUDINARY_CLOUD_NAME",
+        "NEWTON_CLOUDINARY_API_KEY",
+        "NEWTON_CLOUDINARY_API_SECRET",
+        "NEWTON_FCM_SERVER_KEY"
+      ]
     },
     "dev": {
       "cache": false,
