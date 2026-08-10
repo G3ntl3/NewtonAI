@@ -111,6 +111,20 @@ export const tutorTurnSchema = z.object({
     // did the student essentially ask us to just hand over the answer?
     // used as a hard guardrail input in MasteryEngine.
     studentRequestedAnswer: z.boolean(),
+    // WHY the answer was wrong, so the correction can be proportional to the
+    // error — a student who reasoned correctly but slipped on arithmetic
+    // should not get the whole concept re-taught. 'none' when there is no
+    // mistake to classify (correct answer, or no answer yet).
+    //
+    // Advisory metadata ONLY, exactly like `reason`: nothing in code reads
+    // it. MasteryEngine is not aware of this field, so it cannot influence
+    // the reveal ladder, the studentRequestedAnswer veto, or advancement —
+    // it only shapes how the tutor words its reply within the current level.
+    //
+    // Optional so every turn persisted before this field existed stays valid.
+    mistakeType: z
+      .enum(['none', 'conceptual', 'procedural', 'calculation', 'misreading', 'guessing'])
+      .optional(),
   }),
 
   // Advisory signal for whether/how THIS subject chat's concept has been

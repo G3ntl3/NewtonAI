@@ -67,7 +67,10 @@ export default function DashboardShell({ children }) {
         </header>
 
         {/* ── Page content ─────────────────────────────────── */}
-        <main className="flex-1 overflow-y-auto pb-24 md:pb-10">
+        {/* bg-white on mobile: the root is bg-newton-bg (navy) for the
+            desktop sidebar/header, and without this the pb-24 gutter above
+            the fixed BottomNav showed that navy as a stray blue band. */}
+        <main className="flex-1 overflow-y-auto pb-24 md:pb-10 bg-white md:bg-transparent">
           {children}
         </main>
       </div>

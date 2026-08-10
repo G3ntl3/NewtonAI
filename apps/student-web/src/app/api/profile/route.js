@@ -26,6 +26,7 @@ async function loadProfileView(studentId) {
     email: user?.email || null,
     schoolName: user?.schoolName || null,
     nickname: profile?.nickname ?? null,
+    className: profile?.className ?? null,
     gender: profile?.gender ?? null,
     country: profile?.country ?? null,
     homeAddress: profile?.homeAddress ?? null,

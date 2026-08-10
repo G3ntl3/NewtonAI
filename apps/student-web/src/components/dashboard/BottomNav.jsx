@@ -29,8 +29,10 @@ export default function BottomNav() {
   const pathname = usePathname();
 
   return (
+    // bg-white so the safe-bottom inset strip doesn't reveal the shell's
+    // navy root as a blue band under the nav on gesture-bar phones.
     <nav
-      className="md:hidden fixed bottom-0 left-0 right-0 z-50 safe-bottom"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-50 safe-bottom bg-white"
       aria-label="Mobile navigation"
     >
       <ul className="flex items-center justify-between gap-1 bg-white shadow-lg shadow-newton-bg/10 border-t border-newton-bg/[0.06] px-3 py-3">

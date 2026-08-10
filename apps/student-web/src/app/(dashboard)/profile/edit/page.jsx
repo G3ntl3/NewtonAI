@@ -6,16 +6,20 @@ import { Pencil } from 'lucide-react';
 import { fetchMe } from '@/lib/authApi';
 import { fetchProfile, updateProfile, uploadProfilePicture } from '@/lib/profileApi';
 
+// `group` drives which section a field renders in. Previously the two
+// sections were split by hardcoded index (slice(0,5) / slice(5)), so
+// inserting a field silently pushed the last personal field into STEM.
 const FIELDS = [
-  { key: 'nickname', label: 'Nickname', placeholder: 'What should Newton call you?' },
-  { key: 'parentPhoneNumber', label: 'Phone Number', placeholder: '234-123-456-7890' },
-  { key: 'country', label: 'Country', placeholder: 'Nigeria' },
-  { key: 'gender', label: 'Gender', placeholder: 'Female' },
-  { key: 'homeAddress', label: 'Home Address', placeholder: 'Street, city' },
-  { key: 'favoriteSubject', label: 'Most Favorite Subject', placeholder: 'Biology' },
-  { key: 'difficultSubject', label: 'Most Difficult Subject', placeholder: 'Further Maths' },
-  { key: 'futureAmbition', label: 'Future Ambition', placeholder: 'Medical Doctor' },
-  { key: 'interestsHobby', label: 'Interest and Hobby', placeholder: 'Drawing, Writing' },
+  { key: 'nickname', label: 'Nickname', placeholder: 'What should Newton call you?', group: 'personal' },
+  { key: 'className', label: 'Class', placeholder: 'SSS 2', group: 'personal' },
+  { key: 'parentPhoneNumber', label: 'Phone Number', placeholder: '234-123-456-7890', group: 'personal' },
+  { key: 'country', label: 'Country', placeholder: 'Nigeria', group: 'personal' },
+  { key: 'gender', label: 'Gender', placeholder: 'Female', group: 'personal' },
+  { key: 'homeAddress', label: 'Home Address', placeholder: 'Street, city', group: 'personal' },
+  { key: 'favoriteSubject', label: 'Most Favorite Subject', placeholder: 'Biology', group: 'stem' },
+  { key: 'difficultSubject', label: 'Most Difficult Subject', placeholder: 'Further Maths', group: 'stem' },
+  { key: 'futureAmbition', label: 'Future Ambition', placeholder: 'Medical Doctor', group: 'stem' },
+  { key: 'interestsHobby', label: 'Interest and Hobby', placeholder: 'Drawing, Writing', group: 'stem' },
 ];
 
 function TextField({ label, value, onChange, placeholder }) {
@@ -128,21 +132,31 @@ export default function EditProfilePage() {
           <p className="text-newton-blue-mid text-xs font-medium">
             {isUploading ? 'Uploading…' : 'Tap to upload your picture'}
           </p>
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="relative w-24 h-24 rounded-full bg-newton-bg/[0.06] border border-newton-bg/10 overflow-hidden flex items-center justify-center"
-          >
-            {pictureUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={pictureUrl} alt="" className="w-full h-full object-cover" />
-            ) : (
-              <span className="text-newton-bg/25 text-3xl font-bold">+</span>
-            )}
-            <span className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-newton-blue-mid flex items-center justify-center border-2 border-white">
-              <Pencil className="w-3.5 h-3.5 text-white" />
-            </span>
-          </button>
+          {/* The pencil badge sits on this wrapper, NOT inside the button —
+              the button is rounded-full + overflow-hidden (to clip the
+              photo), which was also clipping the badge and burying it. */}
+          <div className="relative w-24 h-24">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-24 h-24 rounded-full bg-newton-bg/[0.06] border border-newton-bg/10 overflow-hidden flex items-center justify-center"
+            >
+              {pictureUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={pictureUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <span className="text-newton-bg/25 text-3xl font-bold">+</span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              aria-label="Change profile picture"
+              className="absolute bottom-0.5 right-0.5 w-9 h-9 rounded-full bg-newton-blue-mid hover:bg-newton-blue-bright transition-colors flex items-center justify-center border-2 border-white shadow-md"
+            >
+              <Pencil className="w-4 h-4 text-white" />
+            </button>
+          </div>
           <input
             ref={fileInputRef}
             type="file"
@@ -165,7 +179,7 @@ export default function EditProfilePage() {
                 className="w-full px-4 py-3 rounded-xl text-sm bg-newton-bg/[0.04] border border-newton-bg/10 text-newton-bg/50"
               />
             </label>
-            {FIELDS.slice(0, 5).map(({ key, label, placeholder }) => (
+            {FIELDS.filter((f) => f.group === 'personal').map(({ key, label, placeholder }) => (
               <TextField
                 key={key}
                 label={label}
@@ -181,7 +195,7 @@ export default function EditProfilePage() {
         <div>
           <p className="text-newton-blue-mid text-xs font-semibold mb-3">STEM Details</p>
           <div className="space-y-3">
-            {FIELDS.slice(5).map(({ key, label, placeholder }) => (
+            {FIELDS.filter((f) => f.group === 'stem').map(({ key, label, placeholder }) => (
               <TextField
                 key={key}
                 label={label}

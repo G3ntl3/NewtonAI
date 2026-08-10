@@ -11,6 +11,7 @@ const optionalText = (max) => z.preprocess(emptyToNull, z.string().max(max).null
 /** PUT /api/profile body — every field optional, full name is NOT included (see profile page). */
 export const profileUpdateSchema = z.object({
   nickname: optionalText(60),
+  className: optionalText(40),
   gender: optionalText(30),
   country: optionalText(60),
   homeAddress: optionalText(200),

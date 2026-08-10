@@ -14,7 +14,6 @@ import ResumeLessonCard from '@/components/dashboard/ResumeLessonCard';
 import DailyLearningCard from '@/components/dashboard/DailyLearningCard';
 import SubjectCard from '@/components/dashboard/SubjectCard';
 import FlashcardTile from '@/components/dashboard/FlashcardTile';
-import BookmarkTile from '@/components/dashboard/BookmarkTile';
 import GoalRow from '@/components/dashboard/GoalRow';
 import BookmarkListItem from '@/components/dashboard/BookmarkListItem';
 import InsightTile from '@/components/dashboard/InsightTile';
@@ -187,26 +186,21 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* ROW 3 — Flashcards + Bookmarks mini | Learning Goals */}
-        <section aria-label="Flashcards, bookmarks and goals" className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-5">
-          {/* Left: Flashcards + Bookmarks 2-col */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <SectionHeader title="Flashcards" href="/flashcards" />
-              {data.flashcards.length === 0 ? (
-                <EmptyNote>Nothing due.</EmptyNote>
-              ) : (
-                data.flashcards.map((c) => <FlashcardTile key={c.id} card={c} />)
-              )}
-            </div>
-            <div>
-              <SectionHeader title="Bookmarks" href="/bookmarks" />
-              {data.bookmarkCards.length === 0 ? (
-                <EmptyNote>None bookmarked.</EmptyNote>
-              ) : (
-                data.bookmarkCards.map((c) => <BookmarkTile key={c.id} card={c} />)
-              )}
-            </div>
+        {/* ROW 3 — Flashcards | Learning Goals */}
+        <section aria-label="Flashcards and goals" className="flex flex-col gap-4 md:grid md:grid-cols-2 md:gap-5">
+          {/* Left: Flashcards. (A second "Bookmarks" block used to sit here
+              showing data.bookmarkCards — bookmarked FLASHCARDS, not chats.
+              Sharing the "Bookmarks" title with the real chat-bookmarks list
+              in ROW 4 read as a duplicate section, so it was removed.) */}
+          <div>
+            <SectionHeader title="Flashcards" href="/flashcards" />
+            {data.flashcards.length === 0 ? (
+              <EmptyNote>Nothing due.</EmptyNote>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                {data.flashcards.map((c) => <FlashcardTile key={c.id} card={c} />)}
+              </div>
+            )}
           </div>
 
           {/* Right: Learning Goals */}

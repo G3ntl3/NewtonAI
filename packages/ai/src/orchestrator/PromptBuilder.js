@@ -133,6 +133,41 @@ function partialCreditInstructions() {
 }
 
 /**
+ * Tutoring-mode only: classify WHY a wrong answer was wrong, so the
+ * correction is PROPORTIONAL to the error. Without this, the assessment's
+ * three-value understanding enum treats an arithmetic slip identically to
+ * genuine confusion, so the tutor re-teaches a whole concept because of a
+ * typo. Purely about how the CHAT TEXT responds to being wrong: mistakeType
+ * is advisory metadata that no code reads (see conversation.js), so it
+ * cannot and must not affect the reveal ladder, the studentRequestedAnswer
+ * veto, or effort-then-stuck advancement — those are separate systems and
+ * are untouched here.
+ */
+function mistakeTypeInstructions() {
+  return [
+    `CLASSIFY THE MISTAKE BEFORE YOU RESPOND: when the student's answer is WRONG, first work out WHY it is wrong, then match the size of your correction to the size of the error. Set "mistakeType" in your assessment to exactly one of: "conceptual", "procedural", "calculation", "misreading", "guessing". Use "none" when there is nothing to classify — the answer was correct, or they have not attempted one yet.`,
+    `- "conceptual" — the underlying IDEA itself is misunderstood. This is the only case that gets the full existing treatment: scaffold, give one brick, analogy if useful, exactly as instructed above.`,
+    `- "procedural" — they understand the idea but applied the METHOD wrongly (right approach, wrong step or wrong order). Point at the SPECIFIC step that went wrong. Do NOT re-teach the concept.`,
+    `- "calculation" — the reasoning AND the method were entirely correct; only the arithmetic slipped. Do NOT re-teach the concept, do NOT offer an analogy, do NOT scaffold. Name the specific calculation and ask them to redo that ONE step.`,
+    `- "misreading" — they misread the question, the numbers, or what was being asked. Clarify what was actually asked. Do NOT re-teach the concept.`,
+    `- "guessing" — no visible reasoning; it reads like a guess. Treat as you would a blank answer: diagnose with a question.`,
+    `WORKED EXAMPLE of the distinction that matters most. Question: "solve 3x = 15". Student says: "3x = 15, so I divide both sides by 3, x = 4." Their concept is PERFECT — they knew to divide both sides by 3. Only 15/3 was computed wrong. That is mistakeType "calculation", and the correct reply is short and surgical, e.g. "Your method is exactly right — dividing both sides by 3 is the move. Just re-check that last division: what is 15 divided by 3?" It is WRONG to respond by re-explaining what an equation is, what it means to isolate x, or by offering a new analogy — the student already demonstrated all of that. Contrast: a student who says "3x = 15, so x = 18" because they ADDED 3 instead of dividing has misunderstood the operation itself — that is "conceptual", and it does get the scaffold.`,
+    `PROPORTIONALITY IS THE POINT: "calculation" and "misreading" get a short, targeted correction — no scaffold, no new analogy, no re-teaching. Over-explaining to a student who just needs "check your arithmetic on that last step" is a real failure, not thoroughness; it wastes their time and implies they understood less than they did.`,
+    `A "calculation" or "misreading" slip does NOT mean the concept is unlearned: keep "understanding" reflecting the real grasp they demonstrated (usually "partial" or "solid") — do NOT drop it to "none" over an arithmetic typo. Separately, mistakeType NEVER changes anything about the reveal ladder, the "just give me the answer" veto, or when you set recommendAdvance — all of those rules stay exactly as instructed above, unaffected by which mistake type you choose.`,
+  ].join('\n');
+}
+
+/**
+ * Short reinforcement of mistakeTypeInstructions, positioned late in the
+ * prompt — every behavior-shaping instruction in this file has needed the
+ * same guidance repeated short and close to generation to be followed
+ * reliably, so it is built in from the start rather than after a failed test.
+ */
+function mistakeTypeReinforcement() {
+  return `CRITICAL — PROPORTIONAL CORRECTION: if the student's reasoning and method were right and ONLY the arithmetic is wrong, set mistakeType="calculation", keep "understanding" at the level they actually demonstrated (NOT "none"), and reply with a SHORT targeted correction naming that one calculation — do NOT re-teach the concept, do NOT add an analogy, do NOT scaffold. Reserve the full scaffold for mistakeType="conceptual", where the idea itself is genuinely misunderstood. This changes only your wording, never the reveal ladder, the answer-demand veto, or recommendAdvance.`;
+}
+
+/**
  * Tutoring-mode only: an example/analogy exists to illuminate one point,
  * then bridge back to the actual question — not to be a destination of its
  * own. Without this, the tutor tends to wander through multiple analogies
@@ -314,6 +349,8 @@ function buildTutoringPrompt(input) {
     ``,
     partialCreditInstructions(),
     ``,
+    mistakeTypeInstructions(),
+    ``,
     exampleDisciplineInstructions(),
     ``,
     simulationInstructions(input.concept),
@@ -330,6 +367,8 @@ function buildTutoringPrompt(input) {
     ``,
     stuckAfterEffortReinforcement(),
     ``,
+    mistakeTypeReinforcement(),
+    ``,
     simulationReinforcement(input.concept),
     ``,
     `Respond as Newton at reveal level ${level}. Return ONLY this exact JSON shape — no extra keys, no renamed keys, no markdown fences:`,
@@ -339,12 +378,14 @@ function buildTutoringPrompt(input) {
     `    "understanding": "none" | "partial" | "solid",`,
     `    "recommendAdvance": true | false,`,
     `    "reason": "...",`,
-    `    "studentRequestedAnswer": true | false`,
+    `    "studentRequestedAnswer": true | false,`,
+    `    "mistakeType": "none" | "conceptual" | "procedural" | "calculation" | "misreading" | "guessing"`,
     `  }`,
     `}`,
     `A chat turn's block MUST use "type": "chat" and "payload": { "text": "..." } — never a "content" key.`,
     `"assessment.understanding" MUST be exactly the string "none", "partial", or "solid" — never a number or score.`,
     `Set studentRequestedAnswer=true ONLY if the student is asking you to just hand over the answer.`,
+    `"assessment.mistakeType" MUST be exactly one of those six strings (see CLASSIFY THE MISTAKE above) — use "none" when the answer was correct or there is no attempt to classify.`,
     subjectSwitchShapeNote(),
     `Include "conceptUpdate": { "established": true, "title": "...", "objective": "..." } ONLY when changing to a new concept within the same subject this turn (see CONCEPT CHANGE above) — omit the "conceptUpdate" key entirely otherwise.`,
   ].join('\n');

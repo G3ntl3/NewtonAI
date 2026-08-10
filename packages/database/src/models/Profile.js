@@ -12,6 +12,9 @@ const profileSchema = new Schema(
   {
     userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     nickname: { type: String, trim: true, default: null },
+    // Free text, not an enum — schools label classes differently (SSS 2,
+    // Grade 11, Form 4), so this is not constrained to a fixed list.
+    className: { type: String, trim: true, default: null },
     gender: { type: String, trim: true, default: null },
     country: { type: String, trim: true, default: null },
     homeAddress: { type: String, trim: true, default: null },

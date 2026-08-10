@@ -4,7 +4,7 @@ import { CardsIcon } from './icons';
 /** Small flashcard tile */
 export default function FlashcardTile({ card }) {
   return (
-    <Card className="p-3 h-full flex flex-col">
+    <Card className="p-3 flex flex-col">
       <div className="flex items-center justify-between mb-2">
         <span className="text-newton-blue-mid text-[9px] font-bold tracking-widest uppercase">
           {card.subject}

@@ -28,6 +28,13 @@ const assessmentSchema = new Schema(
     recommendAdvance: { type: Boolean, required: true },
     reason: { type: String, required: true },
     studentRequestedAnswer: { type: Boolean, required: true },
+    // Optional, mirroring the optional mistakeType in tutorTurnSchema.
+    // Deliberately not `required`: turns written before this field existed,
+    // and any turn where the model omits it, must stay valid.
+    mistakeType: {
+      type: String,
+      enum: ['none', 'conceptual', 'procedural', 'calculation', 'misreading', 'guessing'],
+    },
   },
   { _id: false }
 );

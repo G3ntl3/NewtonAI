@@ -4,6 +4,7 @@
   import { useSearchParams } from 'next/navigation';
   import { Send, Menu, Image as ImageIcon, Mic } from 'lucide-react';
   import { useConversationStore } from '@/stores/conversationStore';
+  import { useSessionStore } from '@/stores/sessionStore';
   import { useConversation } from '@/hooks/useConversation';
   import { fetchChatSession } from '@/lib/chatApi';
   import { SUBJECTS } from '@/lib/subjects';
@@ -13,7 +14,6 @@
   import TurnActionsMenu from '@/components/chat/TurnActionsMenu';
   import AddFlashcardModal from '@/components/chat/AddFlashcardModal';
   import SimulationBlock from '@/components/learning-blocks/SimulationBlock';
-  import { PlusIcon } from '@/components/dashboard/icons';
   import { createBookmark } from '@/lib/bookmarkApi';
   import { createFlashcard } from '@/lib/flashcardApi';
   const SUBJECT_LABELS = Object.fromEntries(SUBJECTS.map((s) => [s.id, s.label]));
@@ -36,6 +36,11 @@
     const setHistory = useConversationStore((state) => state.setHistory);
     const reset = useConversationStore((state) => state.reset);
     const { sendMessage } = useConversation();
+    // First name only, for the empty-state welcome. Mirrors the dashboard's
+    // fallback chain minus the nickname (no profile fetch on this page).
+    const user = useSessionStore((state) => state.user);
+    const displayName =
+      user?.fullName?.split(' ')[0] || user?.name?.split(' ')[0] || '';
     const [input, setInput] = useState('');
     const [isLoadingHistory, setLoadingHistory] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
@@ -153,9 +158,17 @@
           )}
 
           {!isLoadingHistory && messages.length === 0 && !isStreaming && (
-            <p className="text-newton-bg/45 text-xs px-1 py-2">
-              Say hello, or ask about what you're working on.
-            </p>
+            <div className="flex flex-col items-center justify-center text-center py-14 px-4">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/logo.png" alt="" className="w-12 h-12 rounded-xl mb-4" />
+              <h2 className="text-newton-bg text-xl font-bold">
+                Welcome{displayName ? `, ${displayName}` : ''}!
+              </h2>
+              <p className="text-newton-bg/50 text-sm mt-1.5 max-w-xs">
+                What would you like to learn in{' '}
+                {SUBJECT_LABELS[subject] ?? subject} today?
+              </p>
+            </div>
           )}
 
           {messages.map((message, i) =>
@@ -175,18 +188,13 @@
                   <span className="text-newton-bg/70 text-xs font-semibold">Newton AI</span>
                 </div>
                 {message.blocks.map((block, j) => (
-                  <LearningBlockRenderer key={j} block={block} />
+                  <LearningBlockRenderer
+                    key={j}
+                    block={block}
+                    onSave={() => setTurnMenuIndex(turnMenuIndex === i ? null : i)}
+                    isSaveOpen={turnMenuIndex === i}
+                  />
                 ))}
-
-                <button
-                  type="button"
-                  onClick={() => setTurnMenuIndex(turnMenuIndex === i ? null : i)}
-                  aria-label="Save this response"
-                  aria-expanded={turnMenuIndex === i}
-                  className="absolute -bottom-2 right-2 w-6 h-6 rounded-full bg-newton-green shadow-md flex items-center justify-center hover:scale-105 transition-transform z-10"
-                >
-                  <PlusIcon className="w-3.5 h-3.5 text-white" />
-                </button>
 
                 {turnMenuIndex === i && (
                   <TurnActionsMenu

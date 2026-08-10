@@ -39,10 +39,13 @@ function ToggleRow({ icon, label, hint, checked, onChange }) {
         aria-checked={checked}
         aria-label={label}
         onClick={onChange}
-        className={`w-10 h-6 rounded-full shrink-0 transition-colors relative ${checked ? 'bg-newton-blue-mid' : 'bg-newton-bg/15'}`}
+        className={`w-10 h-6 p-0 rounded-full shrink-0 transition-colors relative ${checked ? 'bg-newton-blue-mid' : 'bg-newton-bg/15'}`}
       >
+        {/* left-0 is load-bearing: without it the knob resolves its static
+            position inside the button's default UA padding, so it sat
+            off-centre and overflowed the track when switched on. */}
         <span
-          className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
+          className={`absolute top-0.5 left-0 w-5 h-5 rounded-full bg-white shadow transition-transform ${checked ? 'translate-x-[18px]' : 'translate-x-0.5'}`}
         />
       </button>
     </div>
