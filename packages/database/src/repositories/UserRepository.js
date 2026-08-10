@@ -1,4 +1,5 @@
 import User from '../models/User.js';
+import { watDateKey, nextStreakState } from '../streak.js';
 
 function normalizePhone(phone) {
   if (!phone) return undefined;
@@ -101,6 +102,53 @@ export const UserRepository = {
       { $set: payload },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     ).exec();
+  },
+
+  /**
+   * Record that this student was active today and roll their streak forward.
+   * Rules live in ../streak.js (pure); this only reads state, applies them,
+   * and writes back when something actually changed — a second message the
+   * same day is a no-op with no write.
+   *
+   * @param {string} id
+   * @param {Date} [now] injectable for tests; defaults to the real clock
+   * @returns {Promise<{currentStreak: number, longestStreak: number, lastActiveDate: string}|null>}
+   */
+  async recordDailyActivity(id, now = new Date()) {
+    if (!id) return null;
+
+    const user = await User.findById(String(id))
+      .select('currentStreak longestStreak lastActiveDate')
+      .exec();
+    if (!user) return null;
+
+    const todayKey = watDateKey(now);
+    const next = nextStreakState(user, todayKey);
+
+    if (!next.changed) {
+      return {
+        currentStreak: user.currentStreak ?? 0,
+        longestStreak: user.longestStreak ?? 0,
+        lastActiveDate: user.lastActiveDate ?? null,
+      };
+    }
+
+    await User.updateOne(
+      { _id: user._id },
+      {
+        $set: {
+          currentStreak: next.currentStreak,
+          longestStreak: next.longestStreak,
+          lastActiveDate: next.lastActiveDate,
+        },
+      }
+    ).exec();
+
+    return {
+      currentStreak: next.currentStreak,
+      longestStreak: next.longestStreak,
+      lastActiveDate: next.lastActiveDate,
+    };
   },
 };
 

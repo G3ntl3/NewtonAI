@@ -7,6 +7,7 @@ import { GoalRepository } from '@newton/database/src/repositories/GoalRepository
 import { BookmarkRepository } from '@newton/database/src/repositories/BookmarkRepository.js';
 import { FlashcardRepository } from '@newton/database/src/repositories/FlashcardRepository.js';
 import { AnalyticsRepository } from '@newton/database/src/repositories/AnalyticsRepository.js';
+import { UserRepository } from '@newton/database/src/repositories/UserRepository.js';
 
 const WEEKLY_GOAL_HOURS_DEFAULT = 6;
 const WEEK_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -103,6 +104,7 @@ export async function getDashboardSummary(userId) {
     bookmarkedFlashcards,
     analytics,
     sessions,
+    student,
   ] = await Promise.all([
     SubjectRepository.listAll(),
     TopicRepository.countsBySubject(),
@@ -116,9 +118,21 @@ export async function getDashboardSummary(userId) {
     FlashcardRepository.findBookmarkedDueForUser(userId, 1),
     AnalyticsRepository.findByUser(userId),
     StudySessionRepository.findSinceForUser(userId, new Date(Date.now() - 30 * DAY_MS)),
+    UserRepository.findById(userId),
   ]);
 
-  const { streak, weekDays, weekMinutes } = computeStreakAndWeek(sessions);
+  // The STREAK NUMBER now comes from the persisted, student-level streak that
+  // the chat route maintains (User.currentStreak — see packages/database/
+  // src/streak.js): any message on any day counts, evaluated in WAT.
+  //
+  // computeStreakAndWeek() still derives its own streak from StudySession
+  // minutes, but that value is deliberately NOT destructured here — the two
+  // measure different things and the persisted one is authoritative. The
+  // weekly aggregation it returns (weekDays / weekMinutes) IS still used, for
+  // the bar chart, the "this week" hours and the weekly-goal bar, so that
+  // logic stays exactly as it was.
+  const { weekDays, weekMinutes } = computeStreakAndWeek(sessions);
+  const streak = student?.currentStreak ?? 0;
   const weeklyGoalHours = WEEKLY_GOAL_HOURS_DEFAULT;
   const weeklyGoalProgress = Math.min(100, Math.round((weekMinutes / 60 / weeklyGoalHours) * 100));
 

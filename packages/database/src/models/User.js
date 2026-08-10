@@ -27,6 +27,17 @@ const userSchema = new Schema(
     schoolName: { type: String, trim: true },
     schoolId: { type: Schema.Types.ObjectId, ref: 'School', default: null },
     isActive: { type: Boolean, default: true },
+
+    // --- Daily activity streak (see ../streak.js for the rules) -----------
+    // Student-level, spanning every subject — deliberately NOT on Session,
+    // which is per (student, subject). Nothing here touches the reveal
+    // ladder; this is activity tracking only.
+    currentStreak: { type: Number, default: 0, min: 0 },
+    longestStreak: { type: Number, default: 0, min: 0 },
+    // Date-only 'YYYY-MM-DD' in WAT, stored as a String rather than a Date on
+    // purpose: a Date is always a timestamp, which reintroduces the
+    // time-of-day ambiguity that makes day comparisons fragile.
+    lastActiveDate: { type: String, default: null },
   },
   { timestamps: true }
 );

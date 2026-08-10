@@ -12,6 +12,7 @@ import { buildPrompt } from '@newton/ai/src/orchestrator/PromptBuilder.js';
 import { decideRevealLevel, resolveConcept } from '@newton/ai/src/orchestrator/MasteryEngine.js';
 import { tutorTurnSchema } from '@newton/types/src/conversation.js';
 import { getOrCreateSession, saveSession } from '@newton/database/src/repositories/sessionRepo.js';
+import { UserRepository } from '@newton/database/src/repositories/UserRepository.js';
 import { SUBJECTS } from '@newton/database/src/models/Session.js';
 import { requireStudent } from '@newton/auth/src/session.js';
 
@@ -130,6 +131,15 @@ export async function POST(req) {
         ],
         lastDecisionNote: decision.note, // useful for your adversarial tests
       });
+
+      // 8. STUDENT-LEVEL ACTIVITY STREAK. Independent of the reveal ladder
+      //    and of this subject's session — any message on any day counts.
+      //    Wrapped: a streak write must never be able to fail a lesson turn.
+      try {
+        await UserRepository.recordDailyActivity(student.id);
+      } catch (err) {
+        console.error('[POST /api/chat] streak update failed (non-fatal):', err.message);
+      }
 
       controller.close();
     },
