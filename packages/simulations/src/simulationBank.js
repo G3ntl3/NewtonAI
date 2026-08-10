@@ -95,6 +95,29 @@ export const simulationBank = {
     paramHints:
       'Params: voltage (source EMF, volts, 1-24), resistance (ohms, 0.5-50). Current is DERIVED (I = V/R) — never a param, never set it yourself. Read stated voltage/resistance values from the problem; a stated value always overrides any default; only default a value the student did NOT specify at all.',
   },
+  'gas-laws': {
+    title: 'Gas Laws',
+    concepts: [
+      "boyle's law",
+      'boyles law',
+      "charles's law",
+      'charles law',
+      "gay-lussac's law",
+      'gay-lussac',
+      'gay lussac',
+      'gas law',
+      'gas laws',
+      'ideal gas',
+      'pressure and volume',
+      'pressure volume temperature',
+    ],
+    fits:
+      'The gas-laws simulation models a fixed amount of gas with ONE variable held constant, selected by the "mode" param: constant temperature (Boyle\'s Law, P1V1 = P2V2), constant pressure (Charles\'s Law, V1/T1 = V2/T2), or constant volume (Gay-Lussac\'s Law, P1/T1 = P2/T2). It lets the student vary the two remaining quantities and watch the third relationship hold. Fit test: does this problem hold one of pressure, volume, or temperature CONSTANT while the other two change? If yes, emit with the matching mode.',
+    doesNotFit:
+      'It always holds exactly one variable constant for a fixed amount of gas — it cannot model problems where all three of pressure, volume and temperature change at once with nothing held constant, nor gas mixtures, partial pressures, moles/molar-mass or stoichiometry calculations, diffusion, or real (non-ideal) gas behaviour. Do NOT emit it for any of those — teach them Socratically with words instead.',
+    paramHints:
+      'Params: mode ("constant-temperature" | "constant-pressure" | "constant-volume"), pressure (atm, 0.5-10), volume (L, 1-20), temperature (K, 200-500). FIRST identify which quantity the problem states is held constant and pick the matching mode: "at constant temperature"/"isothermal" -> constant-temperature; "at constant pressure" -> constant-pressure; "in a rigid/sealed container of fixed volume" -> constant-volume. Then read the other two stated values from the problem into their params. A stated value always overrides any default; only default a value the student did NOT specify at all. Temperature must be in KELVIN — convert if the problem gives Celsius (K = degreesC + 273).',
+  },
 };
 
 export default simulationBank;
