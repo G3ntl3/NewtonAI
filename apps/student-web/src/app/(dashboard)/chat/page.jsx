@@ -36,11 +36,14 @@
     const setHistory = useConversationStore((state) => state.setHistory);
     const reset = useConversationStore((state) => state.reset);
     const { sendMessage } = useConversation();
-    // First name only, for the empty-state welcome. Mirrors the dashboard's
-    // fallback chain minus the nickname (no profile fetch on this page).
+    // Name for the empty-state welcome, preferring the nickname. The fetch
+    // itself lives in Sidebar, which DashboardShell mounts on every dashboard
+    // route (hidden on mobile via CSS, but still mounted), so the store is
+    // populated here without this page issuing its own request.
     const user = useSessionStore((state) => state.user);
+    const nickname = useSessionStore((state) => state.nickname);
     const displayName =
-      user?.fullName?.split(' ')[0] || user?.name?.split(' ')[0] || '';
+      nickname || user?.fullName?.split(' ')[0] || user?.name?.split(' ')[0] || '';
     const [input, setInput] = useState('');
     const [isLoadingHistory, setLoadingHistory] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);

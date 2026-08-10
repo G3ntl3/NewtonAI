@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { logout } from '@/lib/authApi';
+import { fetchProfile } from '@/lib/profileApi';
 import { useSessionStore } from '@/stores/sessionStore';
 import {
   HomeIcon,
@@ -32,9 +34,31 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, clearSession } = useSessionStore();
+  const { user, nickname, pictureUrl, setProfileSummary, clearSession } = useSessionStore();
+
+  // Nickname + picture live on the Profile record, not the auth user. Fetched
+  // once per session (null = not yet fetched) and cached in the store, so
+  // navigating between dashboard routes doesn't re-request them.
+  useEffect(() => {
+    if (nickname !== null) return undefined;
+    let cancelled = false;
+
+    (async () => {
+      const res = await fetchProfile();
+      if (cancelled) return;
+      setProfileSummary({
+        nickname: res.ok ? res.data.data.nickname || '' : '',
+        pictureUrl: res.ok ? res.data.data.pictureUrl || '' : '',
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [nickname, setProfileSummary]);
 
   const displayName =
+    nickname ||
     user?.fullName?.split(' ')[0] ||
     user?.name?.split(' ')[0] ||
     'Tolu';
@@ -48,7 +72,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="hidden md:flex flex-col w-60 min-h-screen bg-newton-navy border-r border-white/[0.06] shrink-0 fixed left-0 top-0 bottom-0 z-30">
+    <aside className="hidden md:flex flex-col w-60 min-h-screen bg-newton-bg border-r border-white/[0.06] shrink-0 fixed left-0 top-0 bottom-0 z-30">
       {/* ── Logo ───────────────────────────────────────────── */}
       <div className="flex items-center gap-3 px-5 py-5 border-b border-white/[0.06]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -95,18 +119,30 @@ export default function Sidebar() {
 
       {/* ── User / Sign out ─────────────────────────────────── */}
       <div className="p-3 border-t border-white/[0.06]">
-        <div className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-white/[0.05] cursor-pointer transition-all group">
-          {/* Avatar */}
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-newton-blue-mid to-newton-cyan flex items-center justify-center text-[11px] font-bold text-white shrink-0">
-            {initials}
-          </div>
-          {/* Name + role */}
-          <div className="flex-1 min-w-0">
-            <p className="text-newton-cyan-ghost text-sm font-semibold truncate leading-none">
-              {displayName}
-            </p>
-            <p className="text-newton-cyan-lighter text-[11px] mt-0.5">Student</p>
-          </div>
+        <div className="flex items-center gap-3 px-2 py-2.5 rounded-xl hover:bg-white/[0.05] transition-all">
+          {/* Avatar + name link to the profile. Kept as a sibling of the
+              sign-out button, not a wrapper around it — nesting a button
+              inside a link is invalid HTML and the click would bubble. */}
+          <Link href="/profile" className="flex items-center gap-3 flex-1 min-w-0 group">
+            {pictureUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={pictureUrl}
+                alt=""
+                className="w-8 h-8 rounded-full object-cover shrink-0"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-newton-blue-mid to-newton-cyan flex items-center justify-center text-[11px] font-bold text-white shrink-0">
+                {initials}
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-newton-cyan-ghost text-sm font-semibold truncate leading-none">
+                {displayName}
+              </p>
+              <p className="text-newton-cyan-lighter text-[11px] mt-0.5">Student</p>
+            </div>
+          </Link>
           {/* Log out */}
           <button
             onClick={handleLogout}
