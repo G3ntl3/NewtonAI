@@ -21,8 +21,25 @@ export default function SimulationBlock({ payload }) {
     return <SimulationFallback />;
   }
 
-  const { Component } = entry;
-  return <Component {...parsed.data} />;
+  // `explainer` is the sim's student-facing note on the concept it teaches
+  // (simulationBank.js). Rendered here rather than inside each component so
+  // every sim gets one in both chat and the Lab, and a new sim picks it up
+  // automatically. Optional — a sim without one simply renders on its own.
+  const { Component, explainer } = entry;
+
+  return (
+    <div className="w-full max-w-sm mx-auto space-y-2">
+      <Component {...parsed.data} />
+      {explainer && (
+        <div className="bg-newton-blue-mid/[0.06] border border-newton-blue-mid/15 rounded-2xl px-4 py-3">
+          <p className="text-newton-blue-mid text-[10px] font-bold tracking-widest uppercase mb-1.5">
+            What this shows
+          </p>
+          <p className="text-newton-bg/70 text-xs leading-relaxed">{explainer}</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function SimulationFallback() {

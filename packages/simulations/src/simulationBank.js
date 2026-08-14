@@ -12,6 +12,11 @@
  *
  * Fields per sim:
  *   title       - human name shown in prompt text.
+ *   explainer   - STUDENT-FACING, unlike the rest of this file: a short
+ *                 plain-language note on the concept the simulation is
+ *                 teaching. Rendered under the sim by SimulationBlock, so it
+ *                 shows everywhere a sim appears (chat and the Lab) without
+ *                 each component repeating it. Never sent to the model.
  *   subject     - one of physics/chemistry/biology/maths (packages/database's
  *                 SUBJECTS enum) — used by the Lab catalog to group/filter
  *                 cards. Not read by PromptBuilder or the registry.
@@ -25,6 +30,8 @@
 export const simulationBank = {
   'projectile-motion': {
     title: 'Projectile Motion',
+    explainer:
+      'When you launch something at an angle, two things happen at once and independently: it keeps moving forward at a steady speed, while gravity pulls it downward. Combining those two motions is what bends the path into an arc — and why the launch angle and speed together decide how far and how high it goes.',
     subject: 'physics',
     concepts: ['projectile', 'trajectory', 'projectile motion'],
     fits:
@@ -36,6 +43,8 @@ export const simulationBank = {
   },
   'graph-explorer': {
     title: 'Graph Explorer',
+    explainer:
+      'A straight-line equation y = mx + c describes a relationship between two quantities. The slope m sets how steeply the line rises or falls, and the intercept c sets where it crosses the y-axis. Changing one at a time shows exactly which part of the equation controls which part of the picture.',
     subject: 'maths',
     concepts: [
       'linear equation',
@@ -56,6 +65,8 @@ export const simulationBank = {
   },
   'quadratic-explorer': {
     title: 'Quadratic Explorer',
+    explainer:
+      'Because x is squared, a quadratic draws a curve called a parabola instead of a straight line. The coefficient a decides how narrow or wide that curve is and whether it opens upward or downward, while b and c slide it around the grid. The lowest or highest point of the curve is its vertex.',
     subject: 'maths',
     concepts: [
       'quadratic',
@@ -76,6 +87,8 @@ export const simulationBank = {
   },
   'ohms-law': {
     title: "Ohm's Law",
+    explainer:
+      'Voltage is the push that drives charge around a circuit, and resistance is what holds that flow back. The current you actually get is the balance between them: I = V / R. Increase the voltage and more current flows; increase the resistance and less does.',
     subject: 'physics',
     concepts: [
       "ohm's law",
@@ -97,6 +110,8 @@ export const simulationBank = {
   },
   'gas-laws': {
     title: 'Gas Laws',
+    explainer:
+      'A fixed amount of gas has three linked properties: pressure, volume and temperature. Hold one of them steady and the other two can only change together, in a fixed way. That is all Boyle\'s, Charles\'s and Gay-Lussac\'s laws are — the same underlying relationship seen from three different angles, depending on which property you keep constant.',
     concepts: [
       "boyle's law",
       'boyles law',
@@ -117,6 +132,28 @@ export const simulationBank = {
       'It always holds exactly one variable constant for a fixed amount of gas — it cannot model problems where all three of pressure, volume and temperature change at once with nothing held constant, nor gas mixtures, partial pressures, moles/molar-mass or stoichiometry calculations, diffusion, or real (non-ideal) gas behaviour. Do NOT emit it for any of those — teach them Socratically with words instead.',
     paramHints:
       'Params: mode ("constant-temperature" | "constant-pressure" | "constant-volume"), pressure (atm, 0.5-10), volume (L, 1-20), temperature (K, 200-500). FIRST identify which quantity the problem states is held constant and pick the matching mode: "at constant temperature"/"isothermal" -> constant-temperature; "at constant pressure" -> constant-pressure; "in a rigid/sealed container of fixed volume" -> constant-volume. Then read the other two stated values from the problem into their params. A stated value always overrides any default; only default a value the student did NOT specify at all. Temperature must be in KELVIN — convert if the problem gives Celsius (K = degreesC + 273).',
+  },
+  'diffusion-osmosis': {
+    title: 'Diffusion & Osmosis',
+    explainer:
+      'Particles are always moving, so they drift from where they are crowded to where they are sparse until they are evenly spread. That difference in crowding is a concentration gradient, and no energy is needed to move down it. Diffusion is particles spreading through open space; osmosis is the same idea but with water crossing a membrane that the solute cannot pass through.',
+    concepts: [
+      'diffusion',
+      'osmosis',
+      'concentration gradient',
+      'particle movement',
+      'cell membrane',
+      'semi-permeable membrane',
+      'solute',
+      'solvent',
+      'passive transport',
+    ],
+    fits:
+      'The diffusion-osmosis simulation models PASSIVE particle movement down a concentration gradient, in one of two modes. Use mode "diffusion" for particles spreading through an open space with NO barrier — ink spreading in water, perfume or a smell spreading across a room, a gas filling a container. Use mode "osmosis" for WATER moving across a semi-permeable membrane between two different concentrations — a cell in salt water, a potato strip in sugar solution, red blood cells swelling or shrinking. Fit test: is this a substance spreading, or water crossing a membrane, purely because of a concentration difference and with no energy input? If yes, emit with the matching mode.',
+    doesNotFit:
+      'It models PASSIVE movement only — movement driven purely by the concentration gradient. It cannot model active transport or anything requiring energy/ATP (e.g. the sodium-potassium pump, moving a substance AGAINST its gradient), facilitated diffusion that depends on specific carrier or channel proteins, or the molecular structure of the membrane itself. Do NOT emit it for any of those — teach them Socratically with words instead.',
+    paramHints:
+      'Params: mode ("diffusion" | "osmosis"), particleCount (10-80), initialConcentrationDifference (0-1). Pick "osmosis" whenever a membrane, cell wall, or two separated solutions of different concentration are mentioned; pick "diffusion" when a substance simply spreads through open space with no barrier. particleCount is presentational — leave it at the default unless the problem names a specific number of particles. Set initialConcentrationDifference high (around 0.8) for a stark starting gradient like "a drop of ink" or "much saltier outside the cell", and lower when the two sides start closer together.',
   },
 };
 

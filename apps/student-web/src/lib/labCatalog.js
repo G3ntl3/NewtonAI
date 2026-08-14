@@ -8,6 +8,8 @@ const LIVE_SUBJECTS = {
   'graph-explorer': 'maths',
   'quadratic-explorer': 'maths',
   'ohms-law': 'physics',
+  'gas-laws': 'chemistry',
+  'diffusion-osmosis': 'biology',
 };
 
 // Estimated duration for each real, tappable sim — short sandbox
@@ -17,6 +19,8 @@ const LIVE_DURATIONS = {
   'graph-explorer': '8 min',
   'quadratic-explorer': '8 min',
   'ohms-law': '10 min',
+  'gas-laws': '12 min',
+  'diffusion-osmosis': '12 min',
 };
 const DEFAULT_LIVE_DURATION = '10 min';
 
@@ -27,6 +31,8 @@ const LIVE_SUBTITLES = {
   'graph-explorer': 'See how slope and intercept shape the line',
   'quadratic-explorer': 'See how a, b, and c shape the parabola',
   'ohms-law': 'Explore current as voltage and resistance change',
+  'gas-laws': 'Hold one property constant and watch the other two respond',
+  'diffusion-osmosis': 'Watch particles spread down a concentration gradient',
 };
 
 // The core formula shown under each sim, via the formula learning block
@@ -36,6 +42,10 @@ const LIVE_FORMULAS = {
   'graph-explorer': { latex: 'y = mx + c', caption: 'Equation of a line' },
   'quadratic-explorer': { latex: 'y = ax^2 + bx + c', caption: 'Quadratic equation' },
   'ohms-law': { latex: 'I = \\frac{V}{R}', caption: "Ohm's Law" },
+  // Boyle's Law shown as the representative case — the sim covers all three
+  // via its mode selector, and its own card states the active law.
+  'gas-laws': { latex: 'P_1 V_1 = P_2 V_2', caption: "Boyle's Law (constant temperature)" },
+  'diffusion-osmosis': { latex: '\\text{high concentration} \\rightarrow \\text{low concentration}', caption: 'Movement down a concentration gradient' },
 };
 
 // Variable glossary shown under the formula on each sim's detail page —
@@ -65,6 +75,18 @@ const LIVE_VARIABLES = {
     { symbol: 'V', meaning: 'Voltage (volts, V) — the source EMF' },
     { symbol: 'R', meaning: 'Resistance (ohms, Ω)' },
   ],
+  'gas-laws': [
+    { symbol: 'P', meaning: 'Pressure (atmospheres, atm)' },
+    { symbol: 'V', meaning: 'Volume (litres, L)' },
+    { symbol: 'T', meaning: 'Temperature (kelvin, K) — always absolute, never Celsius' },
+    { symbol: '₁ ₂', meaning: 'Before and after the change (state 1, state 2)' },
+  ],
+  'diffusion-osmosis': [
+    { symbol: 'Solute', meaning: 'The dissolved substance — cannot cross the membrane' },
+    { symbol: 'Water', meaning: 'The solvent — crosses the membrane freely' },
+    { symbol: 'Gradient', meaning: 'The difference in concentration between two areas' },
+    { symbol: 'Passive', meaning: 'Movement needing no energy — driven by the gradient alone' },
+  ],
 };
 
 /**
@@ -79,7 +101,9 @@ export const comingSoonExperiments = [
   { title: 'Refraction of Light', subject: 'physics', estimatedTime: '10 min' },
   { title: 'Rates of Reaction', subject: 'chemistry', estimatedTime: '15 min' },
   { title: 'Electrolysis', subject: 'chemistry', estimatedTime: '15 min' },
-  { title: 'Osmosis', subject: 'biology', estimatedTime: '12 min' },
+  // 'Osmosis' was listed here until the diffusion-osmosis sim was built —
+  // removed so the Lab doesn't show a "coming soon" card for something that
+  // now has a working, tappable one.
   { title: 'Food Tests', subject: 'biology', estimatedTime: '12 min' },
   { title: 'Onion Cells Under a Microscope', subject: 'biology', estimatedTime: '10 min' },
 ];

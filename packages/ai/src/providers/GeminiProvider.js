@@ -55,7 +55,7 @@ export async function* streamTurn(prompt) {
       }
       return; // finished cleanly
     } catch (err) {
-      if (!isRateLimit(err) || attempt >= MAX_RETRIES) throw normalize(err);
+      if (!isTransient(err) || attempt >= MAX_RETRIES) throw normalize(err);
       // backoff with jitter — critical so a room full of students doesn't
       // synchronize their retries and hammer the same rolling window.
       const delay = BASE_DELAY_MS * 2 ** attempt + Math.random() * 400;
@@ -71,6 +71,27 @@ function isRateLimit(err) {
   // API method name shows up in nearly every Gemini error message), which
   // was misclassifying unrelated errors (e.g. a bad model name) as 429s.
   return status === 429 || /\brate\b|\bquota\b|\b429\b/i.test(err?.message ?? '');
+}
+
+/**
+ * 503 — the model is temporarily overloaded ("This model is currently
+ * experiencing high demand"). Observed live on the production model, where it
+ * previously failed the student's turn outright with no retry. Distinct from
+ * 429: nothing about our usage is wrong, the upstream is just busy, so it is
+ * exactly the kind of failure a backoff should absorb.
+ */
+function isOverloaded(err) {
+  const status = err?.status ?? err?.response?.status;
+  return status === 503 || /\b503\b|\boverloaded\b|high demand/i.test(err?.message ?? '');
+}
+
+/**
+ * Transient = worth retrying. Both cases fail on the initial request, BEFORE
+ * any chunk has been yielded, so a retry cannot duplicate partial output into
+ * a caller that is accumulating the stream.
+ */
+function isTransient(err) {
+  return isRateLimit(err) || isOverloaded(err);
 }
 
 function normalize(err) {
