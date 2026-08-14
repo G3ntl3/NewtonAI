@@ -155,6 +155,34 @@ export const simulationBank = {
     paramHints:
       'Params: mode ("diffusion" | "osmosis"), particleCount (10-80), initialConcentrationDifference (0-1). Pick "osmosis" whenever a membrane, cell wall, or two separated solutions of different concentration are mentioned; pick "diffusion" when a substance simply spreads through open space with no barrier. particleCount is presentational — leave it at the default unless the problem names a specific number of particles. Set initialConcentrationDifference high (around 0.8) for a stark starting gradient like "a drop of ink" or "much saltier outside the cell", and lower when the two sides start closer together.',
   },
+  titration: {
+    title: 'Acid-Base Titration',
+    concepts: [
+      'titration',
+      'titrate',
+      'acid-base titration',
+      'ph curve',
+      'titration curve',
+      'equivalence point',
+      'end point',
+      'endpoint',
+      'buffer',
+      'buffer solution',
+      'weak acid',
+      'strong acid',
+      'weak base',
+      'strong base',
+      'indicator',
+      'neutralisation',
+      'neutralization',
+    ],
+    fits:
+      'The titration simulation runs a full acid-base titration: a burette delivers a strong base into a measured volume of acid in a flask, showing the live pH, a pH-versus-volume curve, an indicator endpoint, and a rough/1st/2nd/3rd readings table with an average titre. It covers BOTH a strong acid (sharp jump, equivalence at pH 7) and a weak acid via its Ka (a flat buffer region, pH = pKa at half-equivalence, and a smaller jump to an equivalence point ABOVE pH 7). Fit test: is this an acid-base neutralisation where concentration or volume is found by titration, or an exploration of the shape of a pH curve? If yes, emit.',
+    doesNotFit:
+      'It models ACID-BASE titration in water only. It cannot model redox titrations (e.g. potassium manganate(VII) against iron(II)), precipitation or complexometric titrations, non-aqueous solvents, or the specific colour-change chemistry of a named indicator beyond a generic endpoint pH. It also does not do the stoichiometry of anything other than a 1:1 acid-base reaction. Do NOT emit it for any of those — teach them Socratically with words instead.',
+    paramHints:
+      'Params: acidConcentration (mol/L), acidVolumeMl (mL in the flask), baseConcentration (mol/L in the burette), ka (OPTIONAL), endpointPh. Read the stated concentrations and volumes straight from the problem. CRITICAL — ka decides strong vs weak: OMIT ka entirely for a strong acid (hydrochloric, nitric, sulfuric); supply ka ONLY when the problem names a weak acid, using its real value (ethanoic/acetic 1.8e-5, methanoic/formic 1.8e-4, carbonic 4.3e-7, hydrofluoric 6.8e-4). ka must lie between 1e-14 and 1e-1 — never invent a value outside that range. Leave endpointPh at its default (8.2, phenolphthalein) unless the problem names a different indicator.',
+  },
 };
 
 export default simulationBank;

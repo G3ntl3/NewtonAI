@@ -10,6 +10,7 @@ const LIVE_SUBJECTS = {
   'ohms-law': 'physics',
   'gas-laws': 'chemistry',
   'diffusion-osmosis': 'biology',
+  titration: 'chemistry',
 };
 
 // Estimated duration for each real, tappable sim — short sandbox
@@ -21,6 +22,7 @@ const LIVE_DURATIONS = {
   'ohms-law': '10 min',
   'gas-laws': '12 min',
   'diffusion-osmosis': '12 min',
+  titration: '15 min',
 };
 const DEFAULT_LIVE_DURATION = '10 min';
 
@@ -33,6 +35,7 @@ const LIVE_SUBTITLES = {
   'ohms-law': 'Explore current as voltage and resistance change',
   'gas-laws': 'Hold one property constant and watch the other two respond',
   'diffusion-osmosis': 'Watch particles spread down a concentration gradient',
+  titration: 'Run a burette to the endpoint and find the average titre',
 };
 
 // The core formula shown under each sim, via the formula learning block
@@ -46,6 +49,10 @@ const LIVE_FORMULAS = {
   // via its mode selector, and its own card states the active law.
   'gas-laws': { latex: 'P_1 V_1 = P_2 V_2', caption: "Boyle's Law (constant temperature)" },
   'diffusion-osmosis': { latex: '\\text{high concentration} \\rightarrow \\text{low concentration}', caption: 'Movement down a concentration gradient' },
+  // The titration calculation itself. The sim also draws the pH curve; for a
+  // weak acid the buffer region follows Henderson-Hasselbalch (see that sim's
+  // chemistry.js), but this 1:1 relation is what the practical is marked on.
+  titration: { latex: 'C_a V_a = C_b V_b', caption: 'Neutralisation at the equivalence point (1:1)' },
 };
 
 // Variable glossary shown under the formula on each sim's detail page —
@@ -86,6 +93,15 @@ const LIVE_VARIABLES = {
     { symbol: 'Water', meaning: 'The solvent — crosses the membrane freely' },
     { symbol: 'Gradient', meaning: 'The difference in concentration between two areas' },
     { symbol: 'Passive', meaning: 'Movement needing no energy — driven by the gradient alone' },
+  ],
+  titration: [
+    { symbol: 'Cₐ', meaning: 'Concentration of the acid in the flask (mol/L)' },
+    { symbol: 'Vₐ', meaning: 'Volume of acid pipetted into the flask (mL)' },
+    { symbol: 'C_b', meaning: 'Concentration of the base in the burette (mol/L)' },
+    { symbol: 'V_b', meaning: 'Titre — volume of base added to reach the endpoint (mL)' },
+    { symbol: 'Equivalence', meaning: 'Where acid and base exactly cancel — pH 7 for a strong acid, above 7 for a weak one' },
+    { symbol: 'Endpoint', meaning: 'Where the indicator changes colour — as close to equivalence as the indicator allows' },
+    { symbol: 'Kₐ', meaning: 'Acid dissociation constant — only for a weak acid; larger means stronger' },
   ],
 };
 

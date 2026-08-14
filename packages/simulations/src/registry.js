@@ -26,6 +26,8 @@ import GasLaws from './GasLaws/GasLaws.jsx';
 import gasLawsParamSchema from './GasLaws/paramSchema.js';
 import DiffusionOsmosis from './DiffusionOsmosis/DiffusionOsmosis.jsx';
 import diffusionOsmosisParamSchema from './DiffusionOsmosis/paramSchema.js';
+import Titration from './Titration/Titration.jsx';
+import titrationParamSchema from './Titration/paramSchema.js';
 import { simulationBank } from './simulationBank.js';
 
 export const registry = {
@@ -58,6 +60,11 @@ export const registry = {
     Component: DiffusionOsmosis,
     paramSchema: diffusionOsmosisParamSchema,
     ...simulationBank['diffusion-osmosis'],
+  },
+  titration: {
+    Component: Titration,
+    paramSchema: titrationParamSchema,
+    ...simulationBank.titration,
   },
 };
 

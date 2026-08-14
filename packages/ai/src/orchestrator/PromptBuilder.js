@@ -133,6 +133,48 @@ function partialCreditInstructions() {
 }
 
 /**
+ * Tutoring-mode only: a first-time "what IS this?" question deserves a real
+ * answer before any Socratic questioning. Without this, a student opening
+ * with "what is Ohm's law?" got a vague gesture at the topic ("it deals with
+ * how electricity flows") plus a diagnostic question — which reads as
+ * dodging, not teaching, because there is nothing yet for them to reason
+ * FROM. Socratic questioning should follow a clear definition, not replace
+ * one.
+ *
+ * DELIBERATELY NARROW. This changes what the CHAT TEXT says for one message
+ * class only: an opening "what is X". It does not touch decideRevealLevel,
+ * the studentRequestedAnswer veto, effort-then-stuck advancement, or any
+ * assessment field, and it explicitly does NOT apply to problems to solve or
+ * to a concept already explained in this conversation. There is no
+ * structured "already explained" flag in the data model, so that judgement
+ * is made from the conversation history shown above.
+ */
+function definitionalQuestionInstructions() {
+  return [
+    `DEFINITIONAL OPENER — ANSWER IT, THEN GO SOCRATIC: if the student's new message is a genuine FIRST-TIME "what IS this" question about the CONCEPT above — "what is Ohm's law?", "define photosynthesis", "explain what osmosis means", "what does a quadratic mean?" — AND nothing in EARLIER (summary) or RECENT EXCHANGE shows you have already explained this concept in this conversation, then STATE THE ANSWER PLAINLY FIRST, in one or two clear sentences. Give the actual definition or relationship, not a vague gesture at the subject area. CORRECT: "Ohm's law describes how voltage, current and resistance relate — the current through a conductor is the voltage divided by the resistance." WRONG: "It deals with how electricity flows" — that is dodging the question and leaves the student nothing to reason from.`,
+    `Then, in the SAME reply, pivot straight to Socratic engagement: follow the definition with ONE application question that makes them USE what you just told them — e.g. "Now — if you had a 12 V battery and a 6 ohm resistor, what do you think the current would be?" The definition is the starting point for reasoning, never a substitute for it. Do not stop at the definition, and do not ask them to guess the definition you just gave.`,
+    `If the concept has a formula, include it as a "formula" block alongside your chat text (see FORMULA PRESENTATION below) rather than burying it in prose.`,
+    `THIS OVERRIDES THE LEVEL INSTRUCTION ABOVE FOR THIS CASE ONLY — including level 0's "do not hint". It is a narrow exception, not the default.`,
+    `IT DOES NOT APPLY TO PROBLEMS. "If I have a 12 V battery and a 6 ohm resistor, what is the current?", "solve 2x + 5 = 15", "calculate the range", "find the concentration" are PROBLEMS TO SOLVE, not definitional questions — those stay fully Socratic: diagnose first, do NOT hand over the answer, and every existing rule applies unchanged. The test: is the student asking what a thing MEANS (answer it), or asking you to work something out (stay Socratic)?`,
+    `IT APPLIES ONCE. If you have already explained this concept in this conversation and the student asks again, pushes for more, or rephrases, that is NOT a first-time definitional question — return to normal reveal-level behaviour and do not simply re-explain for free.`,
+    `A definitional question is NOT an answer-demand: set studentRequestedAnswer=false for it. Asking what something is differs from refusing to engage and demanding a worked answer — the veto is for the latter and is completely unaffected by this instruction.`,
+  ].join('\n');
+}
+
+/**
+ * Short reinforcement of definitionalQuestionInstructions, placed late in the
+ * prompt — every behaviour-shaping instruction in this file has needed the
+ * same guidance repeated short and close to generation to be followed
+ * reliably, so it is built in from the start rather than after a failed test.
+ */
+function definitionalQuestionReinforcement() {
+  return [
+    `CRITICAL — "WHAT IS X" OPENERS, STEP 1 FIRST: check RECENT EXCHANGE for whether you have ALREADY explained this concept in this conversation. If any previous Newton turn already stated what it is, then a repeat or rephrased "what is X again?" is NOT a first-time question — do NOT explain it a second time, and do NOT restate the definition or the formula. Instead follow the normal reveal level: ask which specific part is unclear, or point them back to the piece they already have and get them reasoning from it. Re-explaining on request is exactly what the reveal ladder exists to prevent.`,
+    `CRITICAL — STEP 2, ONLY if the history shows NO prior explanation of this concept: state the real definition plainly in one or two sentences — with a formula block if the concept has a formula — and THEN ask one application question that uses it. Never a vague gesture at the topic, never only a diagnostic question. A problem to solve ("find/calculate/what is the current if…") is not a definitional question and stays fully Socratic with no answer given. Set studentRequestedAnswer=false for a definitional question either way.`,
+  ].join('\n');
+}
+
+/**
  * Tutoring-mode only: classify WHY a wrong answer was wrong, so the
  * correction is PROPORTIONAL to the error. Without this, the assessment's
  * three-value understanding enum treats an arithmetic slip identically to
@@ -349,6 +391,8 @@ function buildTutoringPrompt(input) {
     ``,
     partialCreditInstructions(),
     ``,
+    definitionalQuestionInstructions(),
+    ``,
     mistakeTypeInstructions(),
     ``,
     exampleDisciplineInstructions(),
@@ -366,6 +410,8 @@ function buildTutoringPrompt(input) {
     exampleDisciplineReinforcement(),
     ``,
     stuckAfterEffortReinforcement(),
+    ``,
+    definitionalQuestionReinforcement(),
     ``,
     mistakeTypeReinforcement(),
     ``,
