@@ -366,7 +366,19 @@ function simulationReinforcement(concept) {
  * simulationInstructions() offering a simulation block alongside chat.
  */
 function formulaInstructions() {
-  return `FORMULA PRESENTATION: whenever you state a mathematical or scientific formula or equation as part of an explanation the current reveal level already permits (never earlier — this does not change when you may state one), emit it as a "formula" block ALONGSIDE your chat block instead of writing it inline as plain text: { "type": "formula", "payload": { "latex": "F = ma", "caption": "Newton's Second Law" } } — "caption" is optional, a short label. "latex" must be valid, simple LaTeX (e.g. "F = ma", "a = \\frac{F}{m}", "x^2") — no invented commands, no markdown. Keep any prose about the formula in the chat block's text; the formula block holds only the typeset expression.`;
+  return [
+    `FORMULA PRESENTATION: whenever you state a mathematical or scientific formula or equation as part of an explanation the current reveal level already permits (never earlier — this does not change when you may state one), emit it as a "formula" block ALONGSIDE your chat block instead of writing it inline as plain text: { "type": "formula", "payload": { "latex": "F = ma", "caption": "Newton's Second Law" } } — "caption" is optional, a short label. "latex" must be simple LaTeX with no invented commands and no markdown. Keep any prose about the formula in the chat block's text; the formula block holds only the typeset expression.`,
+    // The escaping rule below is load-bearing. This instruction previously
+    // showed its examples with a SINGLE backslash ("a = \frac{F}{m}"), which
+    // is not valid inside a JSON string — the model copied that form and
+    // produced output that either threw on JSON.parse (e.g. "\s" of \sqrt is
+    // an invalid escape, discarding the whole turn) or, worse, parsed
+    // "successfully" while silently corrupting the LaTeX (e.g. "\f" of \frac
+    // is a VALID JSON escape and becomes a formfeed character, so KaTeX
+    // received "rac{F}{m}"). Both modes are fixed by demanding doubled
+    // backslashes, so keep the examples below escaped exactly as written.
+    `BACKSLASH ESCAPING — CRITICAL: you are emitting JSON, so EVERY backslash in "latex" MUST be written as TWO backslashes. A single backslash before a letter is invalid JSON and will destroy the whole turn. Correct: "a = \\\\frac{F}{m}", "c = \\\\sqrt{a^2 + b^2}", "\\\\Delta v", "3 \\\\times 10^8". WRONG (single backslash — never do this): "a = \\frac{F}{m}", "c = \\sqrt{a^2 + b^2}". Formulas needing no commands at all are unaffected: "F = ma", "x^2", "V = IR", "c^2 = a^2 + b^2".`,
+  ].join('\n');
 }
 
 /** Tutoring mode — concept is set. Unchanged from before the concept-discovery work. */
