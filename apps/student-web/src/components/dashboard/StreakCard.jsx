@@ -1,6 +1,29 @@
 import Card from './Card';
 import { FlameIcon, FlagIcon } from './icons';
 
+/**
+ * Heat scale for the weekly bars — cool for a light day through to red for a
+ * heavy one. Buckets are decided server-side from real minutes studied (see
+ * INTENSITY_THRESHOLDS in packages/analytics), not from the relative height
+ * of the week, so "red" always means genuinely hot rather than merely the
+ * best day of a quiet week.
+ */
+const HEAT = {
+  none: 'bg-newton-bg/[0.07]',
+  light: 'bg-newton-cyan/40',
+  steady: 'bg-newton-cyan',
+  strong: 'bg-newton-orange',
+  intense: 'bg-red-500',
+};
+
+function formatMinutes(minutes) {
+  if (!minutes) return 'no study yet';
+  if (minutes < 60) return `${minutes}m studied`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h}h ${m}m studied` : `${h}h studied`;
+}
+
 /** Streak widget with weekly bar chart */
 export default function StreakCard({ data }) {
   const maxVal = Math.max(...data.weekDays.map((d) => d.value), 1);
@@ -34,17 +57,14 @@ export default function StreakCard({ data }) {
         {data.weekDays.map((day, i) => (
           <div key={i} className="flex-1 flex flex-col items-center gap-1.5">
             <div
-              className={`w-full rounded-sm progress-fill ${
-                day.today
-                  ? 'bg-newton-blue-mid'
-                  : day.value > 0
-                  ? 'bg-newton-cyan/40'
-                  : 'bg-newton-bg/[0.07]'
+              className={`w-full rounded-sm progress-fill ${HEAT[day.intensity] ?? HEAT.none} ${
+                day.today ? 'ring-1 ring-newton-bg/25' : ''
               }`}
               style={{
                 height: `${day.value > 0 ? (day.value / maxVal) * 100 : 8}%`,
                 minHeight: '4px',
               }}
+              title={`${day.label}: ${formatMinutes(day.minutes ?? 0)}`}
             />
             <span className="text-newton-bg/40 text-[9px] leading-none">{day.label}</span>
           </div>

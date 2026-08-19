@@ -13,6 +13,8 @@ import { decideRevealLevel, resolveConcept } from '@newton/ai/src/orchestrator/M
 import { tutorTurnSchema } from '@newton/types/src/conversation.js';
 import { getOrCreateSession, saveSession } from '@newton/database/src/repositories/sessionRepo.js';
 import { UserRepository } from '@newton/database/src/repositories/UserRepository.js';
+import { StudySessionRepository } from '@newton/database/src/repositories/StudySessionRepository.js';
+import { watDayStart, studyMinutesForTurn } from '@newton/database/src/streak.js';
 import { SUBJECTS } from '@newton/database/src/models/Session.js';
 import { requireStudent } from '@newton/auth/src/session.js';
 
@@ -53,8 +55,17 @@ export async function POST(req) {
   //     Wrapped so a streak failure can never break a lesson turn.
   try {
     await UserRepository.recordDailyActivity(student.id);
+    // Study TIME for the weekly chart. Inferred from the gap since this
+    // session's last turn and clamped (see studyMinutesForTurn) so an
+    // abandoned tab can't book hours that were never studied. Bucketed by
+    // WAT day, the same boundary the streak uses, so the two always agree.
+    await StudySessionRepository.addMinutes(
+      student.id,
+      watDayStart(),
+      studyMinutesForTurn(session.updatedAt)
+    );
   } catch (err) {
-    console.error('[POST /api/chat] streak update failed (non-fatal):', err.message);
+    console.error('[POST /api/chat] activity tracking failed (non-fatal):', err.message);
   }
 
   // 3. BUILD the leveled prompt (history truncation handled inside).

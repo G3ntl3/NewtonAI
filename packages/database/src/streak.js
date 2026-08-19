@@ -34,6 +34,43 @@ export function watDateKey(instant = new Date()) {
     .slice(0, 10);
 }
 
+/**
+ * The WAT calendar day of an instant, as a Date pinned to UTC midnight.
+ * StudySession.date uses this so a day's minutes accumulate into exactly one
+ * row (its unique index is on userId+date), and so the weekly chart buckets
+ * by the SAME day boundary the streak uses. Storing raw local midnight would
+ * put the chart and the streak on different days either side of midnight.
+ */
+export function watDayStart(instant = new Date()) {
+  return new Date(`${watDateKey(instant)}T00:00:00.000Z`);
+}
+
+/**
+ * Minutes of study to credit for one chat turn.
+ *
+ * There is no session heartbeat, so elapsed time is inferred from the gap
+ * since the student's previous turn. That gap is CLAMPED at both ends:
+ *   · a floor, so a single message still earns credit for the thinking and
+ *     reading around it (a turn is never worth zero);
+ *   · a ceiling, so walking away mid-chat — or resuming the next morning —
+ *     cannot book hours of "study" that never happened. This ceiling is the
+ *     whole reason the value is trustworthy.
+ *
+ * @param {Date|string|number|null} previousActivityAt last turn, or null for a new session
+ * @param {Date} [now]
+ * @returns {number} minutes, always between MIN_TURN_MINUTES and MAX_GAP_MINUTES
+ */
+export const MIN_TURN_MINUTES = 1;
+export const MAX_GAP_MINUTES = 10;
+
+export function studyMinutesForTurn(previousActivityAt, now = new Date()) {
+  const prev = previousActivityAt ? new Date(previousActivityAt).getTime() : NaN;
+  const elapsedMs = now.getTime() - prev;
+  if (!Number.isFinite(elapsedMs) || elapsedMs <= 0) return MIN_TURN_MINUTES;
+  const minutes = elapsedMs / 60_000;
+  return Math.min(MAX_GAP_MINUTES, Math.max(MIN_TURN_MINUTES, Math.round(minutes)));
+}
+
 /** Whole days from one 'YYYY-MM-DD' key to another. Negative if toKey is earlier. */
 export function daysBetweenDateKeys(fromKey, toKey) {
   const from = Date.parse(`${fromKey}T00:00:00Z`);

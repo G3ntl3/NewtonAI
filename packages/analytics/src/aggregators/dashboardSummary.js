@@ -8,6 +8,7 @@ import { BookmarkRepository } from '@newton/database/src/repositories/BookmarkRe
 import { FlashcardRepository } from '@newton/database/src/repositories/FlashcardRepository.js';
 import { AnalyticsRepository } from '@newton/database/src/repositories/AnalyticsRepository.js';
 import { UserRepository } from '@newton/database/src/repositories/UserRepository.js';
+import { watDateKey } from '@newton/database/src/streak.js';
 
 const WEEKLY_GOAL_HOURS_DEFAULT = 6;
 const WEEK_LABELS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -46,41 +47,62 @@ function subjectById(subjects, subjectId) {
   return subjects.find((s) => String(s._id) === String(subjectId)) || null;
 }
 
-/** Consecutive-day streak ending today (or yesterday, if today has no session yet) + this week's bars. */
-function computeStreakAndWeek(sessions) {
+/**
+ * How hard a day's studying was, as a bucket the UI can colour by.
+ * Minute thresholds rather than a relative scale, so a light week doesn't
+ * make a 10-minute day look like a peak effort just because it was the best
+ * of a bad week — "hot" should mean genuinely hot.
+ */
+export const INTENSITY_THRESHOLDS = { light: 1, steady: 15, strong: 30, intense: 60 };
+
+function intensityFor(minutes) {
+  if (minutes < INTENSITY_THRESHOLDS.light) return 'none';
+  if (minutes < INTENSITY_THRESHOLDS.steady) return 'light';
+  if (minutes < INTENSITY_THRESHOLDS.strong) return 'steady';
+  if (minutes < INTENSITY_THRESHOLDS.intense) return 'strong';
+  return 'intense';
+}
+
+/**
+ * This week's bars, bucketed by WAT day.
+ *
+ * Days are keyed by the 'YYYY-MM-DD' WAT key rather than the server's local
+ * midnight: StudySession rows are written at WAT-day boundaries (see
+ * watDayStart), and the server runs UTC in production but WAT locally, so
+ * local startOfDay() would shift bars into the wrong column.
+ *
+ * The streak itself is NOT computed here any more — it is the persisted,
+ * message-driven User.currentStreak (see getDashboardSummary).
+ */
+function computeWeek(sessions) {
   const minutesByDay = new Map();
   for (const session of sessions) {
-    const key = startOfDay(session.date).getTime();
+    const key = watDateKey(session.date);
     minutesByDay.set(key, (minutesByDay.get(key) || 0) + session.minutesStudied);
   }
 
-  let streak = 0;
-  let cursor = startOfDay(new Date());
-  if (!minutesByDay.get(cursor.getTime())) {
-    cursor = new Date(cursor.getTime() - DAY_MS);
-  }
-  while ((minutesByDay.get(cursor.getTime()) || 0) > 0) {
-    streak += 1;
-    cursor = new Date(cursor.getTime() - DAY_MS);
-  }
-
-  const today = startOfDay(new Date());
-  const mondayOffset = (today.getDay() + 6) % 7; // 0 = Monday
-  const monday = new Date(today.getTime() - mondayOffset * DAY_MS);
+  const todayKey = watDateKey();
+  const todayUtc = new Date(`${todayKey}T00:00:00.000Z`);
+  // getUTCDay: 0 = Sunday. Shift so 0 = Monday, matching WEEK_LABELS.
+  const mondayOffset = (todayUtc.getUTCDay() + 6) % 7;
+  const monday = new Date(todayUtc.getTime() - mondayOffset * DAY_MS);
 
   let weekMinutes = 0;
   const weekDays = Array.from({ length: 7 }, (_, i) => {
     const day = new Date(monday.getTime() + i * DAY_MS);
-    const minutes = minutesByDay.get(day.getTime()) || 0;
+    const key = day.toISOString().slice(0, 10);
+    const minutes = minutesByDay.get(key) || 0;
     weekMinutes += minutes;
     return {
       label: WEEK_LABELS[i],
       value: Math.round((minutes / 60) * 10) / 10,
-      today: day.getTime() === today.getTime(),
+      minutes,
+      intensity: intensityFor(minutes),
+      today: key === todayKey,
     };
   });
 
-  return { streak, weekDays, weekMinutes };
+  return { weekDays, weekMinutes };
 }
 
 /**
@@ -121,17 +143,12 @@ export async function getDashboardSummary(userId) {
     UserRepository.findById(userId),
   ]);
 
-  // The STREAK NUMBER now comes from the persisted, student-level streak that
-  // the chat route maintains (User.currentStreak — see packages/database/
+  // The STREAK NUMBER comes from the persisted, student-level streak that the
+  // chat route maintains (User.currentStreak — see packages/database/
   // src/streak.js): any message on any day counts, evaluated in WAT.
-  //
-  // computeStreakAndWeek() still derives its own streak from StudySession
-  // minutes, but that value is deliberately NOT destructured here — the two
-  // measure different things and the persisted one is authoritative. The
-  // weekly aggregation it returns (weekDays / weekMinutes) IS still used, for
-  // the bar chart, the "this week" hours and the weekly-goal bar, so that
-  // logic stays exactly as it was.
-  const { weekDays, weekMinutes } = computeStreakAndWeek(sessions);
+  // The weekly bars come from StudySession minutes, written by that same
+  // route and bucketed on the same WAT boundary, so the two agree.
+  const { weekDays, weekMinutes } = computeWeek(sessions);
   const streak = student?.currentStreak ?? 0;
   const weeklyGoalHours = WEEKLY_GOAL_HOURS_DEFAULT;
   const weeklyGoalProgress = Math.min(100, Math.round((weekMinutes / 60 / weeklyGoalHours) * 100));
