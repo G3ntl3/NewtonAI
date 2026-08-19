@@ -115,6 +115,7 @@ export default function ProfilePage() {
   const [streak, setStreak] = useState(null);
   const [flashcards, setFlashcards] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [signingOut, setSigningOut] = useState(false);
   const [activeTab, setActiveTab] = useState('Settings');
   const [language, setLanguage] = useState('English');
   const [toggles, setToggles] = useState({ dataSaver: true, offlineLessons: false, studyNudge: true });
@@ -151,10 +152,20 @@ export default function ProfilePage() {
     return () => { cancelled = true; };
   }, [clearSession, router, setUser]);
 
+  // Guarded so a double-tap can't fire two sign-out requests; also drives
+  // the spinner, since the redirect can take a moment on a slow connection.
   async function handleSignOut() {
-    await logout();
-    clearSession();
-    router.replace('/login');
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logout();
+      clearSession();
+      router.replace('/login');
+    } catch {
+      // Sign-out failed (offline, server error) — let them try again rather
+      // than leaving the row spinning forever.
+      setSigningOut(false);
+    }
   }
 
   if (loading) {
@@ -308,10 +319,21 @@ export default function ProfilePage() {
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-3 py-3 text-left"
+                disabled={signingOut}
+                aria-busy={signingOut}
+                className="w-full flex items-center gap-3 py-3 text-left disabled:cursor-wait"
               >
-                <LogOut className="w-4 h-4 text-red-500" />
-                <span className="text-red-500 text-sm font-medium flex-1">Sign out</span>
+                {signingOut ? (
+                  <span
+                    className="block w-4 h-4 rounded-full border-2 border-red-500 border-t-transparent animate-spin shrink-0"
+                    role="status"
+                  />
+                ) : (
+                  <LogOut className="w-4 h-4 text-red-500" />
+                )}
+                <span className="text-red-500 text-sm font-medium flex-1">
+                  {signingOut ? 'Signing out…' : 'Sign out'}
+                </span>
               </button>
             </div>
           </section>

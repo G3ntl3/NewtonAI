@@ -42,6 +42,21 @@ export async function POST(req) {
     return Response.json({ error: 'Could not start session' }, { status: 500 });
   }
 
+  // 2b. STUDENT-LEVEL ACTIVITY STREAK. Recorded HERE — as soon as we know an
+  //     authenticated student sent a real message — and deliberately NOT
+  //     after the AI turn. The streak counts days the STUDENT was active
+  //     (see packages/database/src/streak.js); whether Gemini then answers,
+  //     times out, or returns malformed JSON is not the student's doing. It
+  //     previously sat after the persist step, so every failed turn silently
+  //     skipped it and the streak under-counted.
+  //     Idempotent per WAT day: a second message today performs no write.
+  //     Wrapped so a streak failure can never break a lesson turn.
+  try {
+    await UserRepository.recordDailyActivity(student.id);
+  } catch (err) {
+    console.error('[POST /api/chat] streak update failed (non-fatal):', err.message);
+  }
+
   // 3. BUILD the leveled prompt (history truncation handled inside).
   //    session.concept === null selects PromptBuilder's discovery mode,
   //    which needs subject; tutoring mode ignores it.
@@ -131,15 +146,6 @@ export async function POST(req) {
         ],
         lastDecisionNote: decision.note, // useful for your adversarial tests
       });
-
-      // 8. STUDENT-LEVEL ACTIVITY STREAK. Independent of the reveal ladder
-      //    and of this subject's session — any message on any day counts.
-      //    Wrapped: a streak write must never be able to fail a lesson turn.
-      try {
-        await UserRepository.recordDailyActivity(student.id);
-      } catch (err) {
-        console.error('[POST /api/chat] streak update failed (non-fatal):', err.message);
-      }
 
       controller.close();
     },

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { logout } from '@/lib/authApi';
@@ -35,6 +35,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, nickname, pictureUrl, setProfileSummary, clearSession } = useSessionStore();
+  const [signingOut, setSigningOut] = useState(false);
 
   // Nickname + picture live on the Profile record, not the auth user. Fetched
   // once per session (null = not yet fetched) and cached in the store, so
@@ -64,11 +65,21 @@ export default function Sidebar() {
     'Tolu';
   const initials = displayName.slice(0, 2).toUpperCase();
 
+  // Guarded so a double-click can't fire two sign-out requests; also drives
+  // the spinner, since the redirect can take a moment on a slow connection.
   async function handleLogout() {
-    await logout();
-    clearSession();
-    router.replace('/login');
-    router.refresh();
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logout();
+      clearSession();
+      router.replace('/login');
+      router.refresh();
+    } catch {
+      // Sign-out failed (offline, server error) — let them try again rather
+      // than leaving the button spinning forever.
+      setSigningOut(false);
+    }
   }
 
   return (
@@ -146,10 +157,20 @@ export default function Sidebar() {
           {/* Log out */}
           <button
             onClick={handleLogout}
-            title="Sign out"
-            className="text-newton-cyan-lighter hover:text-newton-cyan transition-colors shrink-0"
+            disabled={signingOut}
+            title={signingOut ? 'Signing out…' : 'Sign out'}
+            aria-label={signingOut ? 'Signing out' : 'Sign out'}
+            aria-busy={signingOut}
+            className="text-newton-cyan-lighter hover:text-newton-cyan transition-colors shrink-0 disabled:cursor-wait"
           >
-            <LogOutIcon className="w-4 h-4" />
+            {signingOut ? (
+              <span
+                className="block w-4 h-4 rounded-full border-2 border-newton-cyan-lighter border-t-transparent animate-spin"
+                role="status"
+              />
+            ) : (
+              <LogOutIcon className="w-4 h-4" />
+            )}
           </button>
         </div>
       </div>

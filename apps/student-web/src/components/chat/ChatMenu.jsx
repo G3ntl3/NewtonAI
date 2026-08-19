@@ -29,6 +29,7 @@ const SUPPORT_PHONE = process.env.NEXT_PUBLIC_NEWTON_SUPPORT_PHONE || '+234 800 
 export default function ChatMenu({ onClose, onChangeSubject }) {
   const router = useRouter();
   const [profile, setProfile] = useState(null);
+  const [signingOut, setSigningOut] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,9 +41,19 @@ export default function ChatMenu({ onClose, onChangeSubject }) {
     };
   }, []);
 
+  // Guarded so a double-tap can't fire two sign-out requests; also drives
+  // the spinner, since the redirect can take a moment on a slow connection.
   async function handleSignOut() {
-    await logout();
-    router.push('/login');
+    if (signingOut) return;
+    setSigningOut(true);
+    try {
+      await logout();
+      router.push('/login');
+    } catch {
+      // Sign-out failed (offline, server error) — let them try again rather
+      // than leaving the row spinning forever.
+      setSigningOut(false);
+    }
   }
 
   const displayName = profile?.nickname || profile?.fullName || 'Student';
@@ -116,10 +127,19 @@ export default function ChatMenu({ onClose, onChangeSubject }) {
           <button
             type="button"
             onClick={handleSignOut}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-white/90 text-sm hover:bg-white/5 transition-colors"
+            disabled={signingOut}
+            aria-busy={signingOut}
+            className="w-full flex items-center gap-3 px-4 py-2.5 text-white/90 text-sm hover:bg-white/5 transition-colors disabled:cursor-wait"
           >
-            <LogOutIcon className="w-4 h-4 text-white/50" />
-            Sign Out
+            {signingOut ? (
+              <span
+                className="block w-4 h-4 rounded-full border-2 border-white/50 border-t-transparent animate-spin shrink-0"
+                role="status"
+              />
+            ) : (
+              <LogOutIcon className="w-4 h-4 text-white/50" />
+            )}
+            {signingOut ? 'Signing Out…' : 'Sign Out'}
           </button>
         </div>
       </div>
