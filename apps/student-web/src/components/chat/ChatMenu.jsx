@@ -60,7 +60,7 @@ export default function ChatMenu({ onClose, onChangeSubject }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-40" onClick={onClose} />
+      <div className="fixed mt-30 inset-0 z-40" onClick={onClose} />
       <div className="fixed right-4 md:right-8 top-16 z-50 w-72 bg-newton-bg rounded-2xl shadow-xl overflow-hidden animate-fade-in">
         <Link
           href="/profile"
@@ -82,17 +82,23 @@ export default function ChatMenu({ onClose, onChangeSubject }) {
         </Link>
 
         <div className="py-2">
-          <button
-            type="button"
-            onClick={() => {
-              onChangeSubject();
-              onClose();
-            }}
-            className="w-full flex items-center gap-3 px-4 py-2.5 text-white/90 text-sm hover:bg-white/5 transition-colors"
-          >
-            <RepeatIcon className="w-4 h-4 text-white/50" />
-            Change Subject
-          </button>
+          {/* Chat-only action. The shell's TopNav reuses this menu on every
+              dashboard route and has no subject to change, so it is omitted
+              when no handler is supplied rather than rendering a button that
+              would throw on click. */}
+          {onChangeSubject && (
+            <button
+              type="button"
+              onClick={() => {
+                onChangeSubject();
+                onClose();
+              }}
+              className="w-full flex items-center gap-3 px-4 py-2.5 text-white/90 text-sm hover:bg-white/5 transition-colors"
+            >
+              <RepeatIcon className="w-4 h-4 text-white/50" />
+              Change Subject
+            </button>
+          )}
 
           <div
             className="flex items-center gap-3 px-4 py-2.5 text-white/30 text-sm select-none"

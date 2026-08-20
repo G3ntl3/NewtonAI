@@ -1,6 +1,6 @@
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
-import { SearchIcon, BellIcon } from './icons';
+import TopNav from './TopNav';
 
 /**
  * DashboardShell
@@ -26,45 +26,12 @@ export default function DashboardShell({ children }) {
        */}
       <div className="flex-1 min-w-0 flex flex-col min-h-screen md:ml-60">
         {/*
-         * Desktop-only top header bar.
-         * Mobile header lives inside each page (so it can show
-         * contextual greeting / page title).
+         * Desktop-only sticky top bar: brand, search, and the hamburger that
+         * opens the shared menu. Mobile header lives inside each page (so it
+         * can show a contextual greeting / page title), with BottomNav for
+         * navigation.
          */}
-        <header className="hidden md:flex items-center justify-between px-8 py-4 border-b border-white/[0.06] bg-newton-bg/90 backdrop-blur-sm sticky top-0 z-20">
-          <div>
-            <p className="text-newton-cyan-lighter text-xs tracking-wide uppercase">
-              Newton AI · Student
-            </p>
-          </div>
-
-          {/* Search bar */}
-          <div className="flex items-center gap-3">
-            <label htmlFor="dashboard-search" className="sr-only">Search</label>
-            <div className="relative">
-              <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-newton-cyan-lighter" />
-              <input
-                id="dashboard-search"
-                type="search"
-                placeholder="Search topics, subjects…"
-                className="
-                  pl-9 pr-4 py-2 text-sm rounded-xl
-                  bg-newton-navy border border-white/[0.08]
-                  text-newton-cyan-pale placeholder:text-newton-cyan-lighter
-                  focus:outline-none focus:border-newton-blue-mid
-                  w-56 transition-all
-                "
-              />
-            </div>
-
-            {/* Notification bell */}
-            <button
-              aria-label="Notifications"
-              className="w-9 h-9 rounded-xl bg-newton-navy border border-white/[0.08] flex items-center justify-center hover:border-newton-blue-mid transition-colors"
-            >
-              <BellIcon className="w-4 h-4 text-newton-cyan-lighter" />
-            </button>
-          </div>
-        </header>
+        <TopNav />
 
         {/* ── Page content ─────────────────────────────────── */}
         {/* bg-white on mobile: the root is bg-newton-bg (navy) for the
