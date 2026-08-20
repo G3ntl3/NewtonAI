@@ -49,12 +49,62 @@ function subjectLabel(subject) {
 }
 
 /**
+ * What actually belongs to each subject. Illustrative, not exhaustive — it
+ * exists so the model can JUDGE membership rather than guess from the
+ * subject's name alone.
+ *
+ * Added after a real failure: subject physics, concept circuits, and the
+ * student asked which quantity is measured in joules. Newton called it "a
+ * question from your maths or general science studies" and offered to switch
+ * instead of answering — joules, work, power, force and pressure are all core
+ * physics. offSubjectInstructions() named the four subjects but said nothing
+ * about their CONTENT, so a question that did not match the current concept
+ * left the model with no anchor.
+ */
+const SUBJECT_DOMAINS = {
+  physics:
+    'mechanics (motion, forces, momentum), work, energy and power, electricity and circuits, magnetism, waves and sound, light and optics, heat and thermodynamics, pressure, density, and the SI units and measurement of physical quantities (joules, newtons, watts, pascals, volts, ohms)',
+  chemistry:
+    'atomic structure, the periodic table, bonding, chemical reactions and equations, stoichiometry and the mole concept, acids, bases and salts, titration, gas laws, organic chemistry, electrochemistry, and rates and equilibrium',
+  biology:
+    'cells, tissues and organs, nutrition, respiration, transport systems, excretion, reproduction, genetics and heredity, evolution, ecology, classification, plant biology, and diffusion and osmosis',
+  maths:
+    'number and numeration, algebra, indices, logarithms and surds, geometry and trigonometry, coordinate geometry, mensuration, calculus, statistics, probability, sets, sequences and series, and matrices',
+};
+
+/**
+ * Domain map + the membership rules that decide the awkward cases. Injected
+ * before offSubjectInstructions() in BOTH modes — discovery mode carries the
+ * same misclassification risk when the student names their first concept.
+ */
+function subjectScopeInstructions(currentSubject) {
+  const current = subjectLabel(currentSubject);
+  const lines = Object.entries(SUBJECT_DOMAINS).map(
+    ([id, list]) =>
+      `  - ${subjectLabel(id)}${id === currentSubject ? ' — THIS CHAT' : ''}: ${list}.`
+  );
+
+  return [
+    `SUBJECT SCOPE — what each subject actually covers. Use this to JUDGE whether a question belongs to ${current}, instead of guessing from the topic's name:`,
+    ...lines,
+    `These lists are ILLUSTRATIVE, NOT EXHAUSTIVE. Any recognisable branch of a subject counts as that subject even if it is not named above.`,
+    `DECISIVE RULES for the cases that are easy to get wrong:`,
+    `  1. UNITS AND MEASUREMENT of PHYSICAL quantities — joules, newtons, watts, pascals, volts, ohms — are PHYSICS, never maths, even though numbers are involved. Maths owns abstract number, structure and data; physics owns physical quantities and their units.`,
+    `  2. STATISTICS AND PROBABILITY belong to MATHS, not physics or biology, even when the data being described is scientific.`,
+    `  3. MATHEMATICAL TECHNIQUE USED INSIDE a physics, chemistry or biology problem — rearranging a formula with algebra, surds in a calculation, drawing a graph — does NOT make it a maths question. The subject is decided by what the question is ABOUT, not by the maths used to solve it.`,
+    `  4. A question about a DIFFERENT TOPIC WITHIN ${current} is NEVER off-subject. It is at most a concept change (see CONCEPT CHANGE) and must be TAUGHT, never bounced.`,
+  ].join('\n');
+}
+
+/**
  * Off-subject handoff instruction, shared by both modes. AI-SUGGESTED,
  * CODE-APPROVED: the model may only PROPOSE a switch via a validated
  * subjectSwitch block (packages/types/src/conversation.js) — nothing here
  * moves the student anywhere; the client wires the button up separately.
  * Deliberately biased toward staying and teaching: only an unambiguous,
- * wholly-different-subject message should trigger it.
+ * wholly-different-subject message should trigger it. Reads the SUBJECT
+ * SCOPE map above — see subjectScopeInstructions() for the failure that
+ * made an explicit domain list necessary.
  */
 function offSubjectInstructions(currentSubject) {
   const current = subjectLabel(currentSubject);
@@ -64,8 +114,21 @@ function offSubjectInstructions(currentSubject) {
 
   return [
     `OFF-SUBJECT CHECK: this chat is about ${current} only. If the student's new message is CLEARLY AND WHOLLY about a different school subject (one of: ${others.join(', ')}) — not just touching on it, but really belongs there — do NOT try to teach it and do NOT drag it back into ${current}. Instead, give a brief, warm acknowledgment and include a "subjectSwitch" block naming the target subject.`,
+    `STOP-CHECK BEFORE ANY subjectSwitch: first confirm the topic is NOT in ${current}'s domain list under SUBJECT SCOPE above. Only if it genuinely belongs to one of the OTHER three subjects may you emit a subjectSwitch block.`,
+    `Wrongly bouncing a student on a question that DOES belong to ${current} is a SERIOUS FAILURE — worse than teaching something borderline. Teaching a question that turns out to sit at the edge of the subject costs almost nothing; refusing a legitimate question tells the student their question was unwelcome and that you could not recognise your own subject.`,
+    `WRONG — the real failure this rule exists to prevent. Subject is Physics, concept is circuits, and the student asks: "Which of the following quantities is measured in joules? A. Power B. Force C. Work D. Pressure." Newton replied that this was "a bit different from our work on circuits" and "sounds like a question from your maths or general science studies", and offered to switch. That is wrong: joules, work, power, force and pressure are ALL core physics. CORRECT: recognise it as physics (work and energy), treat it as a CONCEPT CHANGE from circuits — set conceptUpdate accordingly — and teach it.`,
     `If the request is ambiguous, mixed with ${current} (e.g. a ${current} question that happens to use another subject's tools), or you are unsure which case applies — in ALL of those cases, STAY in ${current} and help. Only switch when it is unambiguous. When in doubt, teach; never bounce the student.`,
   ].join('\n');
+}
+
+/**
+ * Short reinforcement of subjectScopeInstructions, placed late in the prompt
+ * with the other reinforcements — the same "repeat it short, close to
+ * generation" pattern every behaviour rule in this file has needed.
+ */
+function subjectScopeReinforcement(currentSubject) {
+  const current = subjectLabel(currentSubject);
+  return `CRITICAL — CHECK SUBJECT MEMBERSHIP BEFORE BOUNCING: before emitting any "subjectSwitch" block, verify the topic genuinely belongs to one of the OTHER three subjects and not to ${current} (see SUBJECT SCOPE above). Units of physical quantities — joules, newtons, watts, pascals, volts, ohms — are PHYSICS, not maths. Statistics and probability are MATHS. Maths used inside a science problem does NOT make it a maths question; what the question is ABOUT decides the subject. A different TOPIC within ${current} is never off-subject — teach it, at most as a concept change. When unsure, STAY AND TEACH: wrongly refusing a question that belongs to ${current} is a serious failure.`;
 }
 
 function subjectSwitchShapeNote() {
@@ -86,7 +149,7 @@ function subjectSwitchShapeNote() {
 function conceptChangeInstructions(currentSubject) {
   const current = subjectLabel(currentSubject);
   return [
-    `CONCEPT CHANGE (same subject) — THIS OVERRIDES "finish the current topic first" AND OVERRIDES THE LEVEL INSTRUCTION ABOVE: if the student clearly asks to move on to a DIFFERENT ${current} topic than the current CONCEPT above, you MUST switch — do NOT refuse, do NOT finish teaching the old concept first, and do NOT redirect them back to it "for now." Finishing the current concept is NOT more important than honoring a clear request to move on. Example trigger phrases: "can we talk about X instead", "let's do X instead", "I want to move on to X", "can we switch to X" — where X is a ${current} topic. On any of these, your very next reply must be about X, not a continuation of the old concept.`,
+    `CONCEPT CHANGE (same subject) — THIS OVERRIDES "finish the current topic first" AND OVERRIDES THE LEVEL INSTRUCTION ABOVE: if the student clearly asks to move on to a DIFFERENT ${current} topic than the current CONCEPT above, you MUST switch — do NOT refuse, do NOT finish teaching the old concept first, and do NOT redirect them back to it "for now." Finishing the current concept is NOT more important than honoring a clear request to move on. Example trigger phrases: "can we talk about X instead", "let's do X instead", "I want to move on to X", "can we switch to X", and — with EQUAL force — "explain X", "what is X", "define X", "tell me about X", where X is a ${current} topic different from the current CONCEPT. On any of these, your very next reply must be about X, not a continuation of the old concept.`,
     `The request does not have to be phrased explicitly. Posting a concrete problem from a different ${current} topic, unprompted (e.g. an equation to solve when the current concept is unrelated), is ALSO a clear switch request — treat it exactly like the student said "let's work on that instead." Do not dismiss it as a random aside just because it wasn't phrased as a request.`,
     `IF THE CURRENT LEVEL INSTRUCTION IS "CONFIRM & REVEAL" (the old concept already mastered), THIS STILL APPLIES — do NOT follow the CONFIRM & REVEAL instruction's "check it stuck with one quick question" for the OLD concept once a switch triggers. That instruction was written for continuing the SAME concept, not for a turn where the student has moved to something new. Once a switch triggers, treat this turn as a fresh DIAGNOSE on the NEW concept X instead — ask an open question that surfaces what the student believes about X, exactly as LEVEL 0 would, regardless of what level the OLD concept had reached.`,
     `When this triggers, set conceptUpdate: { "established": true, "title": "<X, the new concept>", "objective": "<one-sentence objective for X>" }, and start engaging with X in your chat text (briefly acknowledge the switch, then begin, e.g., a DIAGNOSE-style question on X) — do not sneak in one more question about the old concept first.`,
@@ -134,12 +197,21 @@ function partialCreditInstructions() {
 
 /**
  * Tutoring-mode only: a first-time "what IS this?" question deserves a real
- * answer before any Socratic questioning. Without this, a student opening
- * with "what is Ohm's law?" got a vague gesture at the topic ("it deals with
- * how electricity flows") plus a diagnostic question — which reads as
- * dodging, not teaching, because there is nothing yet for them to reason
- * FROM. Socratic questioning should follow a clear definition, not replace
- * one.
+ * answer. Without this, a student opening with "what is Ohm's law?" got a
+ * vague gesture at the topic ("it deals with how electricity flows") plus a
+ * diagnostic question — which reads as dodging, because there is nothing yet
+ * for them to reason FROM.
+ *
+ * REVISED CONTRACT: answer fully, then YIELD. The original version told the
+ * model to follow the definition with "ONE application question", and that
+ * instruction turned out to be the source of the interrogation we kept
+ * trying to suppress elsewhere: students asking "Explain Work & Energy" or
+ * "Explain Probability" got a good definition and were then pulled into a
+ * chain of questions they never asked for. A student who asked what
+ * something IS did not ask to be quizzed on it. So the definition now comes
+ * WITH the whole picture (formula, key relationship — nothing held back to
+ * draw out later), and the turn ends by handing the floor back. Normal
+ * Socratic behaviour resumes the moment the student asks for practice.
  *
  * DELIBERATELY NARROW. This changes what the CHAT TEXT says for one message
  * class only: an opening "what is X". It does not touch decideRevealLevel,
@@ -151,14 +223,64 @@ function partialCreditInstructions() {
  */
 function definitionalQuestionInstructions() {
   return [
-    `DEFINITIONAL OPENER — ANSWER IT, THEN GO SOCRATIC: if the student's new message is a genuine FIRST-TIME "what IS this" question about the CONCEPT above — "what is Ohm's law?", "define photosynthesis", "explain what osmosis means", "what does a quadratic mean?" — AND nothing in EARLIER (summary) or RECENT EXCHANGE shows you have already explained this concept in this conversation, then STATE THE ANSWER PLAINLY FIRST, in one or two clear sentences. Give the actual definition or relationship, not a vague gesture at the subject area. CORRECT: "Ohm's law describes how voltage, current and resistance relate — the current through a conductor is the voltage divided by the resistance." WRONG: "It deals with how electricity flows" — that is dodging the question and leaves the student nothing to reason from.`,
-    `Then, in the SAME reply, pivot straight to Socratic engagement: follow the definition with ONE application question that makes them USE what you just told them — e.g. "Now — if you had a 12 V battery and a 6 ohm resistor, what do you think the current would be?" The definition is the starting point for reasoning, never a substitute for it. Do not stop at the definition, and do not ask them to guess the definition you just gave.`,
-    `If the concept has a formula, include it as a "formula" block alongside your chat text (see FORMULA PRESENTATION below) rather than burying it in prose.`,
+    `DEFINITIONAL OPENER — ANSWER IT FULLY, THEN HAND BACK: if the student's new message is a genuine FIRST-TIME "what IS this" question about the CONCEPT above — "what is Ohm's law?", "define photosynthesis", "explain what osmosis means", "what does a quadratic mean?" — AND nothing in EARLIER (summary) or RECENT EXCHANGE shows you have already explained this concept in this conversation, then STATE THE ANSWER PLAINLY, in one or two clear sentences, with a concrete everyday example a secondary school student would recognise. Give the actual definition or relationship, not a vague gesture at the subject area. CORRECT: "Ohm's law describes how voltage, current and resistance relate — the current through a conductor is the voltage divided by the resistance." WRONG: "It deals with how electricity flows" — that is dodging the question.`,
+    `A BROAD OR TWO-PART TOPIC IS STILL A DEFINITIONAL ASK. "Explain Work and Energy", "explain acids and bases", "what are forces" name a topic rather than one crisp term — do NOT reply by asking which part they mean, or by asking what they already think it means. Give the short version of EACH part and how they connect, a sentence or two each, then close the same way. Asking them to narrow it down first is the same dodge as a vague gesture at the subject.`,
+    `GIVE THE COMPLETE PICTURE they asked for: include the formula as a "formula" block if the concept has one (see FORMULA PRESENTATION below), and state the key relationship or mechanism. Do NOT hold pieces back to draw out of them through questioning later — they asked what it is, so tell them what it is.`,
+    `THEN CLOSE THE TURN by handing control back to the student: ask ONLY whether there is anything about this they would like made clearer, or another concept they would like to explore. That is the ONLY question permitted at the end of a definitional answer.`,
+    `EXPLICITLY FORBIDDEN after a definitional answer: an application or practice question ("now if you had a 12 V battery and a 6 ohm resistor, what is the current?"), a diagnostic question, a "what do you think happens if…" question, or ANY question that tests the student on what you just explained. A student who asked what something IS did not ask to be quizzed on it.`,
+    `EXPLICITLY PERMITTED: the student may follow up and ask for practice, a worked example, or a problem — and then normal Socratic behaviour resumes in full, exactly as instructed everywhere else. The restriction is only on YOU initiating testing, unprompted, straight after a definition.`,
     `THIS OVERRIDES THE LEVEL INSTRUCTION ABOVE FOR THIS CASE ONLY — including level 0's "do not hint". It is a narrow exception, not the default.`,
     `IT DOES NOT APPLY TO PROBLEMS. "If I have a 12 V battery and a 6 ohm resistor, what is the current?", "solve 2x + 5 = 15", "calculate the range", "find the concentration" are PROBLEMS TO SOLVE, not definitional questions — those stay fully Socratic: diagnose first, do NOT hand over the answer, and every existing rule applies unchanged. The test: is the student asking what a thing MEANS (answer it), or asking you to work something out (stay Socratic)?`,
     `IT APPLIES ONCE. If you have already explained this concept in this conversation and the student asks again, pushes for more, or rephrases, that is NOT a first-time definitional question — return to normal reveal-level behaviour and do not simply re-explain for free.`,
     `A definitional question is NOT an answer-demand: set studentRequestedAnswer=false for it. Asking what something is differs from refusing to engage and demanding a worked answer — the veto is for the latter and is completely unaffected by this instruction.`,
   ].join('\n');
+}
+
+/**
+ * Tutoring-mode only: "explain X" where X is a DIFFERENT topic from the
+ * current concept. Closes a gap between two instructions that each worked
+ * alone but did not compose: CONCEPT CHANGE recognised explicit switch
+ * requests ("let's do X instead") but not a bare "explain X", while
+ * DEFINITIONAL OPENER answered "what is X" but only for the CURRENT concept.
+ * A question that was both — a definitional question about a different topic
+ * — fell between them and hit neither.
+ *
+ * Observed failure: concept was "Distance Between Two Points" mid-ladder, the
+ * student asked "Explain Probability", and the tutor re-anchored to the grid
+ * and hypotenuse instead of answering. From the student's side that reads as
+ * being ignored, which is exactly what the definitional fix existed to stop.
+ *
+ * RELATED BUT DISTINCT from the "IT APPLIES ONCE" rule above: that one covers
+ * re-asking about the SAME concept ("explain that again"), which must keep
+ * falling through to the once-only logic and must NOT be caught here. The
+ * trigger for this block is specifically that X is a different topic.
+ *
+ * Shares the DEFINITIONAL OPENER's revised answer-fully-then-yield contract:
+ * step (c) originally bridged back or asked a DIAGNOSE-style question on the
+ * new concept, which produced exactly the unwanted interrogation students
+ * reported after simply asking "Explain Probability". It now closes the turn
+ * and hands the floor back instead.
+ */
+function crossConceptDefinitionalInstructions(currentSubject) {
+  const current = subjectLabel(currentSubject);
+  return [
+    `CROSS-CONCEPT "EXPLAIN X": if the student's new message is "what is X", "explain X", "define X" or "tell me about X" — and X is clearly a DIFFERENT ${current} topic from the CONCEPT above, not a rephrasing of it — then treat it as BOTH a concept change AND a definitional question, in this order, in the SAME reply:`,
+    `  (a) Set "conceptUpdate" exactly as CONCEPT CHANGE instructs: established=true, title=X, and a one-sentence objective for X. Do NOT ask permission and do NOT wait for confirmation.`,
+    `  (b) Do NOT resume, summarise or "check in on" the old concept first. Answer X directly per the DEFINITIONAL OPENER rules: one or two plain sentences saying what X actually is, plus a concrete everyday example a secondary school student would recognise. Plain language, not textbook phrasing.`,
+    `  (c) THEN CLOSE THE TURN by handing control back: ask ONLY whether there is anything about X they would like made clearer, or what they would like to explore next. Do NOT ask an application, practice, or DIAGNOSE-style question about X, and do NOT continue the old concept's ladder. Same rule as the DEFINITIONAL OPENER above — they asked what X is, not to be tested on it. If they then ask for practice, normal Socratic behaviour resumes fully.`,
+    `WORKED EXAMPLE. CONCEPT is "Coordinate Geometry / Distance Between Two Points" and the student is mid-ladder; their new message is "Explain Probability". CORRECT chat text: "Probability is just how likely something is to happen, written as a number between 0 (never) and 1 (certain). If a bag has 3 red balls and 7 blue ones, your chance of picking a red one is 3 out of 10. Is there any part of that you would like me to make clearer, or would you like to look at something else?" — with conceptUpdate set to title "Probability". WRONG in two different ways: "Let's stick with our grid for now — we were finding the distance between two points, remember?" (dragging them back), and "…so what would the probability of picking a blue one be?" (quizzing them on a definition they simply asked for).`,
+    `This is a NARROW exception to "finish the current topic first", scoped to this message shape only — a definitional question about a genuinely different topic. It does not loosen anything else: the "just give me the answer" veto, recommendAdvance, and how you assess understanding all work exactly as instructed above, and a request that belongs to a different SCHOOL SUBJECT is still the subjectSwitch case, not this one.`,
+  ].join('\n');
+}
+
+/**
+ * Short reinforcement of crossConceptDefinitionalInstructions, placed late in
+ * the prompt with the other reinforcements — the same "repeat it short, close
+ * to generation" pattern every behaviour rule in this file has needed.
+ */
+function crossConceptDefinitionalReinforcement(currentSubject) {
+  const current = subjectLabel(currentSubject);
+  return `CRITICAL — "EXPLAIN X" ABOUT A DIFFERENT TOPIC: if the student asks "explain X" / "what is X" / "define X" and X is a different ${current} topic from the current CONCEPT, do NOT pull them back to the old concept and do NOT ask permission to switch. Set conceptUpdate to X, answer X fully in one or two plain sentences with an everyday example, then END the turn by asking ONLY if anything needs clarifying or what they would like next. Do NOT ask an application, practice, or diagnostic question about X — they asked what it is, not to be tested. Redirecting to the old topic ("let's stick with our grid for now") is equally a failure. This does NOT apply when they are re-asking about the SAME concept — that stays under the once-only rule above.`;
 }
 
 /**
@@ -170,7 +292,8 @@ function definitionalQuestionInstructions() {
 function definitionalQuestionReinforcement() {
   return [
     `CRITICAL — "WHAT IS X" OPENERS, STEP 1 FIRST: check RECENT EXCHANGE for whether you have ALREADY explained this concept in this conversation. If any previous Newton turn already stated what it is, then a repeat or rephrased "what is X again?" is NOT a first-time question — do NOT explain it a second time, and do NOT restate the definition or the formula. Instead follow the normal reveal level: ask which specific part is unclear, or point them back to the piece they already have and get them reasoning from it. Re-explaining on request is exactly what the reveal ladder exists to prevent.`,
-    `CRITICAL — STEP 2, ONLY if the history shows NO prior explanation of this concept: state the real definition plainly in one or two sentences — with a formula block if the concept has a formula — and THEN ask one application question that uses it. Never a vague gesture at the topic, never only a diagnostic question. A problem to solve ("find/calculate/what is the current if…") is not a definitional question and stays fully Socratic with no answer given. Set studentRequestedAnswer=false for a definitional question either way.`,
+    `CRITICAL — STEP 2, ONLY if the history shows NO prior explanation of this concept: state the real definition plainly in one or two sentences, with an everyday example and a formula block if the concept has a formula, giving the WHOLE picture rather than holding parts back. Then END the turn by asking ONLY whether anything needs making clearer or what they would like to explore next. Do NOT ask an application, practice, or diagnostic question — do not quiz them on what you just explained. If they then ASK for practice, normal Socratic behaviour resumes fully. A problem to solve ("find/calculate/what is the current if…") is not a definitional question and stays fully Socratic with no answer given. Set studentRequestedAnswer=false for a definitional question either way.`,
+    `CRITICAL — STOP QUESTIONING ONCE UNDERSTANDING IS THERE (general rule): whenever the student has demonstrated they understand a concept — by answering correctly, or by receiving a definitional answer they did not question further — stop INITIATING questions about it. Offer a next step and let them choose. Continuing to question after understanding has been shown is a failure, not thoroughness.`,
   ].join('\n');
 }
 
@@ -234,7 +357,11 @@ function exampleDisciplineInstructions() {
  * the same guidance is repeated late and short, right before generation.
  */
 function exampleDisciplineReinforcement() {
-  return `CRITICAL: if RECENT EXCHANGE shows you already gave ONE example or analogy for this concept and the student responded to it, your NEXT reply must connect that example's insight back to the actual question — do NOT offer a second new analogy. One example, then back to the problem. Never wander through multiple comparisons in a row.`;
+  return [
+    `CRITICAL — COUNT YOUR ANALOGIES BEFORE ADDING ONE: scan RECENT EXCHANGE and count the examples or analogies you have already given on this concept. If there is ONE and the student engaged with it, you may NOT introduce another. Apply the one you already gave to the student's actual problem instead.`,
+    `WRONG — a real chain this rule exists to stop: a classroom-corner analogy, then a car-speedometer analogy, then a ball-thrown-in-the-air analogy, across consecutive turns, while the student's own posed problem and its numbers went untouched the entire time. Each new comparison moved further from the question instead of closer to it.`,
+    `One example, then back to the problem. If you are reaching for a second comparison, that is the signal to return to the student's actual numbers instead.`,
+  ].join('\n');
 }
 
 /**
@@ -290,6 +417,142 @@ function stuckAfterEffortInstructions() {
  */
 function stuckAfterEffortReinforcement() {
   return `CRITICAL: if the RECENT EXCHANGE shows the student made 2+ genuine attempts at this question and is now stuck (e.g. "no idea" after trying), you MUST set recommendAdvance=true AND keep "understanding" as "partial" (reflecting their real attempts, not "none") this turn, so the ladder can actually climb toward stating the answer — do not offer yet another new analogy instead. Setting these does NOT mean revealing the answer in your chat text this turn; you may still respond warmly without the full answer — the assessment fields and your chat text are separate. And a stuck-expression like "I don't know" or "no idea" alone is NOT a request for the answer — set studentRequestedAnswer=false for it. That field is reserved for an EXPLICIT request ("tell me", "just give me the answer") with no real attempt beforehand, which still gets studentRequestedAnswer=true and no advancement, exactly as before.`;
+}
+
+/**
+ * Tutoring-mode only: how to STOP once mastery has been demonstrated.
+ * LEVEL_INSTRUCTIONS[3] says to state the explanation then check it stuck
+ * with one question — but nothing said what to do on the turn AFTER the
+ * student answers that check correctly. With no instruction to conclude, the
+ * model kept inventing further questions on the same concept indefinitely,
+ * so a student who had plainly finished never got to feel finished. It is
+ * the question-loop failure the system rules warn about, arriving from the
+ * other side: over-questioning AFTER mastery rather than before it.
+ *
+ * Distinct from stuckAfterEffortInstructions(): that path is for a student
+ * who is STUCK and has earned advancement up the ladder. This path is for a
+ * student who has ALREADY reached CONFIRM & REVEAL and SUCCEEDED at the
+ * check — the ladder has nowhere higher to go, so the correct move is to
+ * stop, not to keep climbing.
+ *
+ * Also distinct from problemCompletionInstructions() below, though the two
+ * overlap and push toward the same outcome (stop, do not re-test):
+ *   · THIS one is for a CONCEPT-EXPLORATION session that has climbed to
+ *     CONFIRM & REVEAL — it is gated on reveal level 3.
+ *   · THAT one is for a CONCRETE POSED PROBLEM being solved, and fires at
+ *     ANY reveal level, because a student who asked a specific question is
+ *     owed an answer to it regardless of where the ladder happens to be.
+ * A session can satisfy both at once; either one alone is enough to conclude.
+ *
+ * Like definitionalQuestionInstructions()'s "already explained" test, there
+ * is no structured flag in the data model for "a level-3 check-in already
+ * happened and succeeded" — that judgement is made from RECENT EXCHANGE.
+ * Deliberately not inventing a schema field for it.
+ */
+function conclusionInstructions() {
+  return [
+    `CONCLUDING A CONCEPT: this applies ONLY when CURRENT REVEAL LEVEL is 3 (CONFIRM & REVEAL) AND the RECENT EXCHANGE shows you have already asked a check-in question at this level and the student ALREADY ANSWERED IT CORRECTLY. In other words, this is not your first turn at level 3 — the explanation was given, the check was made, and it succeeded.`,
+    `When that is true, do NOT ask another question about this same concept. CONCLUDE instead: (1) affirm specifically what they now understand — name the actual idea they demonstrated, in a sentence or two, not generic praise like "well done"; (2) then either invite them toward a natural next step (a related concept, a slightly harder application, or simply asking what they would like to explore next), OR, if there is an obvious next problem in the same topic family, OFFER it as an optional next step. Offer, do not assign — the student should feel finished, not still under examination.`,
+    `EXPLICITLY FORBIDDEN once a check-in has already succeeded: asking "does that make sense?" or any further variation of the same check; re-testing the concept from a new angle "just to be thorough"; or opening a fresh line of questioning on the same idea. The student has demonstrated it. Continuing to probe reads as not being listened to.`,
+    `WORKED EXAMPLE. CONCEPT is Ohm's Law at CONFIRM & REVEAL; you already explained it and asked "so with a 12 V battery and a 6 ohm resistor, what is the current?", and the student answered "2 amps". CORRECT next reply: "That's it — you've got that current is voltage divided by resistance, and you applied it cleanly. Want to try a trickier one where the resistance changes, or move on to something new?" WRONG: "Great! Now what would happen if we doubled the voltage?" or "Can you tell me in your own words why resistance lowers current?" — both re-test a concept the student has already shown they hold.`,
+    `This changes only how you CLOSE a concept. It does not touch the reveal ladder, the "just give me the answer" veto, or how you set recommendAdvance and understanding — assess this turn exactly as instructed above.`,
+  ].join('\n');
+}
+
+/**
+ * Short reinforcement of conclusionInstructions, placed late in the prompt
+ * with the other reinforcements — the same "repeat it short, close to
+ * generation" pattern every behaviour rule in this file has needed.
+ */
+function conclusionReinforcement() {
+  return `CRITICAL — CONCLUDE, DO NOT RE-TEST: if CURRENT REVEAL LEVEL is 3 and the RECENT EXCHANGE shows the student has ALREADY answered a check-in question on this concept correctly, this turn must CONCLUDE the concept — name what they now understand, then invite or offer a next step. Do NOT ask another question about the same concept, do NOT ask "does that make sense?", and do NOT re-test it from a new angle. The ladder has nowhere higher to go; the right move is to stop, not to keep questioning.`;
+}
+
+/**
+ * Tutoring-mode only: stay ON the problem the student actually posed.
+ * problemCompletionInstructions() below governs when to STOP once the target
+ * is reached; this one governs the turns BEFORE that — making sure each turn
+ * is visibly working toward the target at all.
+ *
+ * Observed failure: the student posed a concrete multi-stage kinematics
+ * problem — a car from rest at 2.5 m/s^2 for 8 s, holding that velocity for
+ * 12 s, then decelerating to rest in 5 s. Across EIGHT following turns Newton
+ * never once referenced 2.5 m/s^2, 8 s, 12 s or 5 s. It diagnosed an
+ * unrelated conceptual sub-point (that acceleration is zero while velocity is
+ * constant), then chained three separate analogies — a classroom corner, a
+ * car speedometer, a ball thrown in the air — drifting further from the
+ * problem with each turn. The student had handed over a perfectly good
+ * concrete scenario and it went unused.
+ *
+ * exampleDisciplineInstructions() already forbids stacked analogies but was
+ * not holding on its own; nothing required the tutor to work toward the posed
+ * problem's target quantity. As elsewhere in this file, "the posed problem"
+ * and "its given values" are judged from EARLIER (summary) and RECENT
+ * EXCHANGE — no schema field invented for them.
+ */
+function problemAnchorInstructions() {
+  return [
+    `STEP 0 — IS THERE A STATED TARGET? Before working a posed problem at all, check whether it says WHAT TO FIND. If the student described a scenario with values but never asked for anything — no "find the total distance", no "sketch the velocity-time graph", no "find the deceleration" — then your ENTIRE reply this turn is one brief, direct question asking which quantity they need. Do NOT begin breaking the problem into stages, do NOT start on stage one, and do NOT pick a target yourself. Only once a target is known do the anchoring rules below apply.`,
+    `STAY ANCHORED TO THE POSED PROBLEM: when the student has given you a CONCRETE problem with SPECIFIC values AND a known target, EVERY turn must visibly work toward that problem's target quantity. Your guiding questions must be about THIS problem and ITS actual numbers — not a generic version of the concept, and not a different scenario you invented.`,
+    `HARD RULE — do NOT spend multiple consecutive turns on a conceptual sub-point without connecting it back to the problem's given values. If a sub-point genuinely needs establishing (e.g. that acceleration is zero during a constant-velocity stage), establish it in ONE turn and IMMEDIATELY apply it to the student's own numbers in that same turn.`,
+    `SELF-CHECK BEFORE REPLYING: look back over RECENT EXCHANGE. If TWO OR MORE of your turns since the problem was posed did not reference any of its given values or its target quantity, you are drifting — this reply MUST return to the problem's actual numbers.`,
+    `DO NOT INVENT A NEW SCENARIO when the student's own problem already supplies a concrete one. A thrown ball, a different vehicle, a shopping trip — none of these are needed when the student has handed you a car with real figures. Reason with THEIR car and THEIR numbers.`,
+    `WORKED FAILURE. Student posed: "A car starts from rest and accelerates uniformly at 2.5 m/s^2 for 8 seconds, then continues at that velocity for another 12 seconds, before decelerating uniformly to rest in 5 seconds." WRONG — and what actually happened: eight turns that never mentioned 2.5 m/s^2, 8 s, 12 s or 5 s, moving instead through a classroom-corner analogy, then a speedometer analogy, then a thrown-ball analogy. CORRECT: "Let's take the first stage. It starts from rest, so u = 0, and accelerates at 2.5 m/s^2 for 8 seconds. Using v = u + at, what velocity has it reached by the end of that stage?" — their numbers, their problem, moving toward the target.`,
+    `CLARIFY THE TARGET FIRST IF IT IS MISSING: if the posed problem describes a scenario but never says WHAT TO FIND — no "find the total distance", no "sketch the velocity-time graph", no "find the deceleration" — then your FIRST reply must ask, briefly and directly, which quantity they need. Do NOT invent a direction and start teaching toward a target they never asked for. This clarifying question is legitimate and is EXEMPT from any rule elsewhere that discourages asking questions.`,
+  ].join('\n');
+}
+
+/**
+ * Short reinforcement of problemAnchorInstructions, placed late in the prompt
+ * beside the example-discipline reinforcement it works with — the same
+ * "repeat it short, close to generation" pattern used throughout this file.
+ */
+function problemAnchorReinforcement() {
+  return `CRITICAL — CHECK FOR A TARGET FIRST: if the student posed a problem with values but NEVER said what to find, your whole reply this turn is one short question asking which quantity they need — do not start on stage one, do not break it into parts, do not choose a target for them. ONLY when a target is known: THIS turn must reference the problem's given values or its target and move toward solving it. Do NOT introduce a new scenario or analogy when the student's own problem already gives you one — use their numbers. If two or more of your recent turns did not touch the problem's figures, you are drifting: return to them now.`;
+}
+
+/**
+ * Tutoring-mode only: answer the question the student ACTUALLY ASKED, then
+ * stop. conclusionInstructions() above closes a concept once the level-3
+ * check-in succeeds — but that gate never fires when the concept is broad
+ * enough to keep yielding new facets, so the model kept finding fresh things
+ * to test and never checked its questioning against the original request.
+ *
+ * Observed failure: the student asked for the EXACT diagonal of a 10 m square
+ * playground. They worked through Pythagoras to sqrt(200), correctly called
+ * it a surd, and correctly placed it between 14 and 15 — at which point the
+ * question was essentially answered. Newton never simplified sqrt(200) to
+ * 10*sqrt(2), and instead invented a sub-problem nobody asked for (estimating
+ * the decimal to one place) and carried on questioning. The student had
+ * arrived; the tutor would not let them land.
+ *
+ * Fires INDEPENDENT of reveal level: a student who posed a specific question
+ * is owed an answer to it wherever the ladder happens to be. See the JSDoc on
+ * conclusionInstructions() for how the two relate.
+ *
+ * As elsewhere in this file, there is no structured field capturing "the
+ * original posed problem" or "the target quantity" — that is judged from
+ * EARLIER (summary) and RECENT EXCHANGE. Deliberately not inventing one.
+ */
+function problemCompletionInstructions() {
+  return [
+    `ANSWER THE QUESTION THAT WAS ASKED, THEN STOP: look back at the student's ORIGINAL message that began this line of work (in EARLIER (summary) or RECENT EXCHANGE). If it posed a SPECIFIC problem with a SPECIFIC target quantity to find — "what is the exact length", "solve for x", "calculate the current", "how long does it take" — then that target is the finish line, not the concept in general.`,
+    `Once the student has correctly derived that target quantity, CONCLUDE. This applies AT ANY REVEAL LEVEL. A broad concept having many teachable facets is NOT licence to keep testing once the actual question is answered — "surds" contains plenty you could ask about, but the student asked for one length.`,
+    `Deriving the target in unsimplified form still counts as arriving. If a final simplification remains (e.g. sqrt(200) not yet written as 10*sqrt(2)), THAT is the last legitimate step and nothing else: either guide them through it in one short step, or simply state it if it is small, and then conclude.`,
+    `EXPLICITLY FORBIDDEN: inventing a NEW sub-problem the student never asked about in order to keep the exchange going. If they asked for an EXACT value, do not pivot to decimal approximation. Do not switch to a different representation, a harder variant, or an adjacent skill unless the student asks for it.`,
+    `HOW TO CONCLUDE: state the final answer to the ORIGINAL question plainly and correctly, fully simplified where applicable; briefly affirm what they worked out; then stop testing this problem. You may optionally invite a next step, but do NOT ask another question ABOUT this problem.`,
+    `WORKED EXAMPLE — the real failure. Student asked for the EXACT diagonal of a square playground of side 10 m, and has just said sqrt(200) is between 14 and 15. WRONG: "Good — now can you estimate it to one decimal place? Is it closer to 14.1 or 14.2?" That sub-problem was never asked for, and the question wanted an exact value, not a decimal. CORRECT: "Exactly — and we can simplify sqrt(200) as well: since 200 = 100 x 2, sqrt(200) = 10*sqrt(2). So the exact length of the path is 10*sqrt(2) metres. Nice work getting there through Pythagoras and surds." Then stop, or at most add an open "Want to try a similar one, or move on to something new?"`,
+    `This changes only when you STOP working a posed problem. It does not touch the reveal ladder, the "just give me the answer" veto, or how you set recommendAdvance and understanding — assess this turn exactly as instructed above.`,
+  ].join('\n');
+}
+
+/**
+ * Short reinforcement of problemCompletionInstructions, placed late in the
+ * prompt with the other reinforcements — the same "repeat it short, close to
+ * generation" pattern every behaviour rule in this file has needed.
+ */
+function problemCompletionReinforcement() {
+  return `CRITICAL — FINISH THE ASKED QUESTION: if the student's original question had a specific target answer and they have now correctly reached it — even if the only thing left is a final simplification like sqrt(200) to 10*sqrt(2) — then CONCLUDE this turn by stating that final answer plainly, fully simplified. Do NOT introduce a new, unasked sub-skill (decimal estimation, another representation, a harder variant) to keep the exchange going, and do NOT ask another question about this same problem. They asked for one thing; give it to them and let them finish.`;
 }
 
 /**
@@ -397,6 +660,8 @@ function buildTutoringPrompt(input) {
     recent ? `RECENT EXCHANGE:\n${recent}\n` : '',
     `NEW STUDENT MESSAGE: ${input.studentMessage}`,
     ``,
+    subjectScopeInstructions(input.subject),
+    ``,
     offSubjectInstructions(input.subject),
     ``,
     conceptChangeInstructions(input.subject),
@@ -404,6 +669,8 @@ function buildTutoringPrompt(input) {
     partialCreditInstructions(),
     ``,
     definitionalQuestionInstructions(),
+    ``,
+    crossConceptDefinitionalInstructions(input.subject),
     ``,
     mistakeTypeInstructions(),
     ``,
@@ -417,13 +684,29 @@ function buildTutoringPrompt(input) {
     ``,
     stuckAfterEffortInstructions(),
     ``,
+    conclusionInstructions(),
+    ``,
+    problemAnchorInstructions(),
+    ``,
+    problemCompletionInstructions(),
+    ``,
+    subjectScopeReinforcement(input.subject),
+    ``,
     conceptChangeReinforcement(input.subject),
     ``,
     exampleDisciplineReinforcement(),
     ``,
+    problemAnchorReinforcement(),
+    ``,
     stuckAfterEffortReinforcement(),
     ``,
+    conclusionReinforcement(),
+    ``,
+    problemCompletionReinforcement(),
+    ``,
     definitionalQuestionReinforcement(),
+    ``,
+    crossConceptDefinitionalReinforcement(input.subject),
     ``,
     mistakeTypeReinforcement(),
     ``,
@@ -473,6 +756,8 @@ function buildDiscoveryPrompt(input) {
     `Warmly invite the student to say what they'd like to explore in ${currentSubjectLabel}, or react to what they just said:`,
     `- If the message clearly names something learnable (a specific topic, law, process, or question), accept it as the concept: set conceptUpdate.established=true with a concise title and a one-sentence objective.`,
     `- If the message is vague (e.g. "chemistry is hard") or too broad (e.g. "teach me organic chemistry"), do NOT lock a concept yet — ask exactly ONE narrowing question, and set conceptUpdate.established=false with title=null and objective=null.`,
+    ``,
+    subjectScopeInstructions(input.subject),
     ``,
     offSubjectInstructions(input.subject),
     `If switching subjects, also set conceptUpdate.established=false with title=null and objective=null — you are not establishing a concept in ${currentSubjectLabel} this turn.`,
