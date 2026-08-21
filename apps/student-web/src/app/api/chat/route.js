@@ -14,6 +14,7 @@ import { tutorTurnSchema } from '@newton/types/src/conversation.js';
 import { getOrCreateSession, saveSession } from '@newton/database/src/repositories/sessionRepo.js';
 import { UserRepository } from '@newton/database/src/repositories/UserRepository.js';
 import { StudySessionRepository } from '@newton/database/src/repositories/StudySessionRepository.js';
+import { ErrorEventRepository } from '@newton/database/src/repositories/ErrorEventRepository.js';
 import { watDayStart, studyMinutesForTurn } from '@newton/database/src/streak.js';
 import { SUBJECTS } from '@newton/database/src/models/Session.js';
 import { requireStudent } from '@newton/auth/src/session.js';
@@ -83,11 +84,17 @@ export async function POST(req) {
   // 4. STREAM back to the client while accumulating the full JSON.
   const encoder = new TextEncoder();
   let raw = '';
+  // Reliability instrumentation. Observability only — nothing here feeds the
+  // ladder, the concept, or any assessment, and every write is fire-and-forget
+  // inside ErrorEventRepository so it can never fail a lesson turn.
+  const startedAt = Date.now();
+  let ttftMs = null;
 
   const stream = new ReadableStream({
     async start(controller) {
       try {
         for await (const chunk of streamTurn(prompt)) {
+          if (ttftMs === null) ttftMs = Date.now() - startedAt;
           raw += chunk;
           controller.enqueue(encoder.encode(chunk)); // live to the UI
         }
@@ -95,6 +102,19 @@ export async function POST(req) {
         // Logged server-side (shows in the terminal running `next dev`) —
         // the student only ever sees the friendly message below, never this.
         console.error('[POST /api/chat] streamTurn failed:', err.message, '| rateLimited:', err.rateLimited, '| cause:', err.cause?.message ?? err.cause);
+        ErrorEventRepository.record({
+          route: '/api/chat',
+          ok: false,
+          errorCode: err.errorCode ?? 'AI_ERROR',
+          cause: err.cause?.message ?? err.message,
+          rateLimited: Boolean(err.rateLimited),
+          retryCount: err.retryCount ?? 0,
+          // Retries exhausted: the error escaped the provider's backoff loop.
+          resolvedAfterRetry: false,
+          ttftMs,
+          totalMs: Date.now() - startedAt,
+          userId: student.id,
+        });
         const friendly = err.rateLimited
           ? "A lot of students are asking questions right now — give me a few seconds and try again."
           : "Something went wrong on my end. Try sending that again.";
@@ -112,6 +132,18 @@ export async function POST(req) {
         // same raw text and fails the same way, surfacing as the generic
         // "Something went wrong" message with no indication of why.
         console.error('[POST /api/chat] malformed AI output, turn discarded:', err.message, '| raw:', raw.slice(0, 500));
+        ErrorEventRepository.record({
+          route: '/api/chat',
+          ok: false,
+          errorCode: 'MALFORMED_OUTPUT',
+          cause: err.message,
+          rateLimited: false,
+          retryCount: 0,
+          resolvedAfterRetry: false,
+          ttftMs,
+          totalMs: Date.now() - startedAt,
+          userId: student.id,
+        });
         // Malformed AI output: don't corrupt state, don't advance the ladder.
         controller.close();
         return;
@@ -156,6 +188,17 @@ export async function POST(req) {
           },
         ],
         lastDecisionNote: decision.note, // useful for your adversarial tests
+      });
+
+      // 9. Successful turn — record latency only. Timing has to come from the
+      //    requests that WORK; a latency figure drawn only from failures
+      //    would be meaningless.
+      ErrorEventRepository.record({
+        route: '/api/chat',
+        ok: true,
+        ttftMs,
+        totalMs: Date.now() - startedAt,
+        userId: student.id,
       });
 
       controller.close();

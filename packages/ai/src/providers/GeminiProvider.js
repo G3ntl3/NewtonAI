@@ -55,7 +55,7 @@ export async function* streamTurn(prompt) {
       }
       return; // finished cleanly
     } catch (err) {
-      if (!isTransient(err) || attempt >= MAX_RETRIES) throw normalize(err);
+      if (!isTransient(err) || attempt >= MAX_RETRIES) throw normalize(err, attempt);
       // backoff with jitter — critical so a room full of students doesn't
       // synchronize their retries and hammer the same rolling window.
       const delay = BASE_DELAY_MS * 2 ** attempt + Math.random() * 400;
@@ -94,10 +94,36 @@ function isTransient(err) {
   return isRateLimit(err) || isOverloaded(err);
 }
 
-function normalize(err) {
+/**
+ * Normalised failure class for the reliability log. Deliberately covers the
+ * cases the retry logic does NOT absorb, so they stop being invisible:
+ *   · STREAM_PARSE — "Failed to parse stream": the SSE response was cut off
+ *     mid-line. Not retried (it can fail after chunks have been yielded), so
+ *     without this it left no record at all.
+ *   · NETWORK — fetch never reached Google (DNS, reset, timeout). No HTTP
+ *     status exists for these, so status-based checks all miss them.
+ *   · UPSTREAM_404 — a model name that does not exist, which cost real
+ *     debugging time to identify from terminal output alone.
+ */
+export function classifyError(err) {
+  const status = err?.status ?? err?.response?.status;
+  const msg = err?.message ?? '';
+  if (isRateLimit(err)) return 'RATE_LIMITED';
+  if (isOverloaded(err)) return 'UPSTREAM_503';
+  if (status === 404 || /\b404\b|is not found for API version/i.test(msg)) return 'UPSTREAM_404';
+  if (/failed to parse stream|error parsing json response/i.test(msg)) return 'STREAM_PARSE';
+  if (/fetch failed|ENOTFOUND|ECONNRESET|ETIMEDOUT|EAI_AGAIN|UND_ERR/i.test(msg)) return 'NETWORK';
+  return 'AI_ERROR';
+}
+
+function normalize(err, retryCount = 0) {
   const e = new Error(isRateLimit(err) ? 'RATE_LIMITED' : 'AI_ERROR');
   e.cause = err;
   e.rateLimited = isRateLimit(err);
+  // Carried for the reliability log — the route records these, nothing reads
+  // them for control flow.
+  e.errorCode = classifyError(err);
+  e.retryCount = retryCount;
   return e;
 }
 
