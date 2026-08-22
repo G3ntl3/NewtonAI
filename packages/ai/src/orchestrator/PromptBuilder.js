@@ -644,6 +644,40 @@ function formulaInstructions() {
   ].join('\n');
 }
 
+/**
+ * The JSON output contract, shared by BOTH prompt variants.
+ *
+ * Extracted verbatim from buildTutoringPrompt so the current and legacy
+ * variants cannot drift apart: the A/B is about teaching STYLE only, and a
+ * divergent output shape would break tutorTurnSchema validation on one arm
+ * and invalidate the comparison. Behaviour for the current variant is
+ * unchanged — same lines, same order.
+ *
+ * @param {number} level current reveal level, interpolated into the header
+ * @returns {string[]} prompt lines, joined by the caller
+ */
+function jsonShapeSpec(level) {
+  return [
+    `Respond as Newton at reveal level ${level}. Return ONLY this exact JSON shape — no extra keys, no renamed keys, no markdown fences:`,
+    `{`,
+    `  "blocks": [ { "type": "chat", "payload": { "text": "..." } } ],`,
+    `  "assessment": {`,
+    `    "understanding": "none" | "partial" | "solid",`,
+    `    "recommendAdvance": true | false,`,
+    `    "reason": "...",`,
+    `    "studentRequestedAnswer": true | false,`,
+    `    "mistakeType": "none" | "conceptual" | "procedural" | "calculation" | "misreading" | "guessing"`,
+    `  }`,
+    `}`,
+    `A chat turn's block MUST use "type": "chat" and "payload": { "text": "..." } — never a "content" key.`,
+    `"assessment.understanding" MUST be exactly the string "none", "partial", or "solid" — never a number or score.`,
+    `Set studentRequestedAnswer=true ONLY if the student is asking you to just hand over the answer.`,
+    `"assessment.mistakeType" MUST be exactly one of those six strings (see CLASSIFY THE MISTAKE above) — use "none" when the answer was correct or there is no attempt to classify.`,
+    subjectSwitchShapeNote(),
+    `Include "conceptUpdate": { "established": true, "title": "...", "objective": "..." } ONLY when changing to a new concept within the same subject this turn (see CONCEPT CHANGE above) — omit the "conceptUpdate" key entirely otherwise.`,
+  ];
+}
+
 /** Tutoring mode — concept is set. Unchanged from before the concept-discovery work. */
 function buildTutoringPrompt(input) {
   const level = input.revealLevel ?? 0;
@@ -712,23 +746,7 @@ function buildTutoringPrompt(input) {
     ``,
     simulationReinforcement(input.concept),
     ``,
-    `Respond as Newton at reveal level ${level}. Return ONLY this exact JSON shape — no extra keys, no renamed keys, no markdown fences:`,
-    `{`,
-    `  "blocks": [ { "type": "chat", "payload": { "text": "..." } } ],`,
-    `  "assessment": {`,
-    `    "understanding": "none" | "partial" | "solid",`,
-    `    "recommendAdvance": true | false,`,
-    `    "reason": "...",`,
-    `    "studentRequestedAnswer": true | false,`,
-    `    "mistakeType": "none" | "conceptual" | "procedural" | "calculation" | "misreading" | "guessing"`,
-    `  }`,
-    `}`,
-    `A chat turn's block MUST use "type": "chat" and "payload": { "text": "..." } — never a "content" key.`,
-    `"assessment.understanding" MUST be exactly the string "none", "partial", or "solid" — never a number or score.`,
-    `Set studentRequestedAnswer=true ONLY if the student is asking you to just hand over the answer.`,
-    `"assessment.mistakeType" MUST be exactly one of those six strings (see CLASSIFY THE MISTAKE above) — use "none" when the answer was correct or there is no attempt to classify.`,
-    subjectSwitchShapeNote(),
-    `Include "conceptUpdate": { "established": true, "title": "...", "objective": "..." } ONLY when changing to a new concept within the same subject this turn (see CONCEPT CHANGE above) — omit the "conceptUpdate" key entirely otherwise.`,
+    ...jsonShapeSpec(level),
   ].join('\n');
 
   return { system: SYSTEM_RULES, user };
@@ -787,6 +805,161 @@ function buildDiscoveryPrompt(input) {
   return { system: SYSTEM_RULES, user };
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// LEGACY VARIANT — A/B comparison arm (NEWTON_PROMPT_VARIANT=legacy)
+// ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * System rules for the legacy variant. Brevity is the defining trait: the
+ * older prompt's whole character was short, punchy, direct replies, and it
+ * treated verbosity as an outright failure rather than a style preference.
+ */
+const LEGACY_SYSTEM_RULES = [
+  'You are Newton, a STEM tutor for Nigerian secondary school students.',
+  'BREVITY IS YOUR DEFINING TRAIT. Replies are extremely short, precise and simple — 2 to 3 sentences MAXIMUM.',
+  'Short, punchy, direct sentences. No preambles, no theoretical background, no long paragraphs.',
+  'Overloading the student with words or detail is a FAILURE, not thoroughness.',
+  'Be encouraging and humble. Use simple language a secondary school student reads easily.',
+  'Nigerian cultural analogies (traffic, market, football) are allowed but must be ONE short sentence, used sparingly.',
+  'No markdown bolding. For emphasis use CAPITALS or plain text.',
+  'Return ONLY valid JSON matching the required schema. No markdown, no prose outside JSON.',
+].join(' ');
+
+/**
+ * Phase behaviour for the legacy variant, mapped onto the reveal ladder.
+ *
+ * DELIBERATE APPROXIMATION: the old prompt had no reveal ladder — its phases
+ * ran off the tutor's own judgement of whether the student had solved the
+ * problem. Bypassing decideRevealLevel to reproduce that exactly would change
+ * the CODE PATH as well as the prompt, and this A/B is meant to isolate
+ * teaching STYLE. So the phases are mapped onto the levels that already exist:
+ *
+ *   levels 0-2 -> Phase 1 (Guided Discovery), with the brevity rules
+ *   level  3   -> Phase 1 celebration, then Phase 2 (three-question check)
+ *
+ * Phase 3 (feedback on those answers) then lands naturally on the next turn,
+ * since the student's reply arrives while the session is still at level 3.
+ */
+function legacyPhaseInstructions(level) {
+  if (level >= 3) {
+    return [
+      'PHASE 1 CLOSE — CELEBRATE: the student has earned it. Celebrate what they got right in ONE brief sentence. Do not lecture.',
+      'PHASE 2 — MASTERY VALIDATION: immediately after that one-sentence celebration, tell them you are going to check they can do it again. Then pose THREE short multiple-choice questions at WAEC/JAMB standard on this same topic.',
+      'Write those three questions out inside your normal chat text — numbered 1, 2, 3, each with options A, B, C, D. Keep every question and option SHORT. Do not use any special tags or markup for them.',
+      'PHASE 3 — FEEDBACK (applies on the NEXT turn, once they answer): if all three are correct, celebrate briefly and ask what they want to learn next, in ONE short sentence. If any are wrong, point out the mistake encouragingly but directly and ask them to retry or explain that step — 1 to 2 sentences, no more.',
+    ].join('\n');
+  }
+  return [
+    'PHASE 1 — GUIDED DISCOVERY: explain the core concept in EXACTLY 1 to 2 simple sentences. Then ask the student to perform the VERY FIRST step themselves.',
+    'NEVER hand over the completed solution. Guide them step by step, one step per turn.',
+    'If you give a hint, it is ONE concise sentence. Not two.',
+    'When they solve it, celebrate in one brief sentence — nothing longer.',
+  ].join('\n');
+}
+
+/**
+ * Legacy tutoring prompt.
+ *
+ * Keeps every CORRECTNESS guardrail from the current variant — subject scope,
+ * off-subject handoff, concept change, simulations, formula presentation —
+ * because those fix real, already-diagnosed bugs (wrongly bouncing on-subject
+ * questions, misclassification, invalid LaTeX escaping). Dropping them would
+ * reintroduce known defects and confound the comparison with noise that has
+ * nothing to do with teaching style. Only STYLE and PHASE guidance differ.
+ */
+function buildLegacyTutoringPrompt(input) {
+  const level = input.revealLevel ?? 0;
+  const recent = historyText(input);
+
+  const user = [
+    `CONCEPT: ${input.concept.title}`,
+    `OBJECTIVE: ${input.concept.objective}`,
+    ``,
+    `CURRENT REVEAL LEVEL: ${level}`,
+    legacyPhaseInstructions(level),
+    ``,
+    input.runningSummary ? `EARLIER (summary): ${input.runningSummary}\n` : '',
+    recent ? `RECENT EXCHANGE:\n${recent}\n` : '',
+    `NEW STUDENT MESSAGE: ${input.studentMessage}`,
+    ``,
+    subjectScopeInstructions(input.subject),
+    ``,
+    offSubjectInstructions(input.subject),
+    ``,
+    conceptChangeInstructions(input.subject),
+    ``,
+    simulationInstructions(input.concept),
+    ``,
+    formulaInstructions(),
+    ``,
+    `REMEMBER: 2 to 3 sentences maximum. Short and direct. Being long-winded is a failure.`,
+    ``,
+    ...jsonShapeSpec(level),
+  ].join('\n');
+
+  return { system: LEGACY_SYSTEM_RULES, user };
+}
+
+/**
+ * Legacy discovery prompt — no concept chosen yet, so nothing to teach. Same
+ * contract as current discovery mode (conceptUpdate is how the model PROPOSES
+ * a concept; MasteryEngine.resolveConcept decides), just far terser.
+ */
+function buildLegacyDiscoveryPrompt(input) {
+  const currentSubjectLabel = subjectLabel(input.subject);
+  const recent = historyText(input);
+
+  const user = [
+    `SUBJECT: ${currentSubjectLabel}`,
+    `This is a NEW chat for this subject — no concept has been chosen yet. Do not teach anything.`,
+    ``,
+    input.runningSummary ? `EARLIER (summary): ${input.runningSummary}\n` : '',
+    recent ? `RECENT EXCHANGE:\n${recent}\n` : '',
+    `NEW STUDENT MESSAGE: ${input.studentMessage}`,
+    ``,
+    `In ONE short sentence, ask what they would like to learn in ${currentSubjectLabel}. Nothing longer.`,
+    `- If their message already names something learnable, accept it: set conceptUpdate.established=true with a concise title and a one-sentence objective.`,
+    `- If it is vague or too broad, ask exactly ONE short narrowing question and set conceptUpdate.established=false with title=null and objective=null.`,
+    ``,
+    subjectScopeInstructions(input.subject),
+    ``,
+    offSubjectInstructions(input.subject),
+    `If switching subjects, also set conceptUpdate.established=false with title=null and objective=null.`,
+    ``,
+    `Respond as Newton. Return ONLY this exact JSON shape — no extra keys, no renamed keys, no markdown fences:`,
+    `{`,
+    `  "blocks": [ { "type": "chat", "payload": { "text": "..." } } ],`,
+    `  "assessment": {`,
+    `    "understanding": "none",`,
+    `    "recommendAdvance": false,`,
+    `    "reason": "...",`,
+    `    "studentRequestedAnswer": true | false,`,
+    `    "mistakeType": "none"`,
+    `  },`,
+    `  "conceptUpdate": {`,
+    `    "established": true | false,`,
+    `    "title": "..." | null,`,
+    `    "objective": "..." | null`,
+    `  }`,
+    `}`,
+    `A chat turn's block MUST use "type": "chat" and "payload": { "text": "..." } — never a "content" key.`,
+    `"assessment.understanding" MUST be "none" and "assessment.recommendAdvance" MUST be false — there is no reveal ladder yet.`,
+    `"conceptUpdate.title" and "conceptUpdate.objective" MUST both be null when established=false, and both set when established=true.`,
+    subjectSwitchShapeNote(),
+  ].join('\n');
+
+  return { system: LEGACY_SYSTEM_RULES, user };
+}
+
+/**
+ * Which prompt style to build. 'current' — the default, and what an unset var
+ * gives — is the per-turn assembled prompt; 'legacy' is the older short,
+ * phase-based style, kept for A/B comparison of teaching behaviour.
+ */
+function promptVariant() {
+  return process.env.NEWTON_PROMPT_VARIANT === 'legacy' ? 'legacy' : 'current';
+}
+
 /**
  * @param {Object} input
  * @param {number} [input.revealLevel]      - current level (0..3), set by CODE — tutoring mode only
@@ -798,5 +971,8 @@ function buildDiscoveryPrompt(input) {
  * @returns {{ system: string, user: string }}
  */
 export function buildPrompt(input) {
+  if (promptVariant() === 'legacy') {
+    return input.concept ? buildLegacyTutoringPrompt(input) : buildLegacyDiscoveryPrompt(input);
+  }
   return input.concept ? buildTutoringPrompt(input) : buildDiscoveryPrompt(input);
 }

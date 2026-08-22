@@ -29,6 +29,11 @@ const envSchema = z.object({
   NEWTON_GEMINI_API_KEY: z.string().optional(),
   NEWTON_GEMINI_MODEL: z.string().default('gemini-3-flash'),
 
+  // Tutoring-style A/B switch, read in PromptBuilder.js. 'current' is the
+  // per-turn assembled prompt; 'legacy' is the older short, phase-based
+  // style. Defaults to 'current', so an unset var changes nothing.
+  NEWTON_PROMPT_VARIANT: z.enum(['current', 'legacy']).default('current'),
+
   // Profile picture uploads (packages/media). Optional: routes unrelated to
   // profile pictures must keep booting even before these are provisioned.
   NEWTON_CLOUDINARY_CLOUD_NAME: z.string().optional(),
